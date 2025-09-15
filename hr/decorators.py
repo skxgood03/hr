@@ -9,8 +9,11 @@ def employee_required(view_func):
     def wrapper(request, *args, **kwargs):
         # 检查是否登录
         if not request.session.get('user_id'):
-            if request.headers.get('Content-Type') == 'application/json' or request.path.startswith('/hr/employee/salary/'):
-                return JsonResponse({'success': False, 'message': '请先登录'})
+            is_ajax = (request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 
+                      request.headers.get('Content-Type') == 'application/json' or
+                      '/api/' in request.path or request.path.startswith('/hr/employee/salary/'))
+            if is_ajax:
+                return JsonResponse({'code': 4001, 'message': '请先登录'})
             return redirect('/login/')
         
         try:
@@ -18,21 +21,30 @@ def employee_required(view_func):
             
             # 检查是否为员工角色
             if user.role.name != 'EMPLOYEE':
-                if request.headers.get('Content-Type') == 'application/json' or request.path.startswith('/hr/employee/salary/'):
-                    return JsonResponse({'success': False, 'message': '权限不足，只有员工可以访问'})
+                is_ajax = (request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 
+                          request.headers.get('Content-Type') == 'application/json' or
+                          '/api/' in request.path or request.path.startswith('/hr/employee/salary/'))
+                if is_ajax:
+                    return JsonResponse({'code': 4003, 'message': '权限不足，只有员工可以访问'})
                 return redirect('/')
             
             # 检查是否关联了员工信息
             if not user.employee_id:
-                if request.headers.get('Content-Type') == 'application/json' or request.path.startswith('/hr/employee/salary/'):
-                    return JsonResponse({'success': False, 'message': '员工信息未关联，请联系管理员'})
+                is_ajax = (request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 
+                          request.headers.get('Content-Type') == 'application/json' or
+                          '/api/' in request.path or request.path.startswith('/hr/employee/salary/'))
+                if is_ajax:
+                    return JsonResponse({'code': 4004, 'message': '员工信息未关联，请联系管理员'})
                 return redirect('/')
             
             return view_func(request, *args, **kwargs)
             
         except User.DoesNotExist:
-            if request.headers.get('Content-Type') == 'application/json' or request.path.startswith('/hr/employee/salary/'):
-                return JsonResponse({'success': False, 'message': '用户不存在'})
+            is_ajax = (request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 
+                      request.headers.get('Content-Type') == 'application/json' or
+                      '/api/' in request.path or request.path.startswith('/hr/employee/salary/'))
+            if is_ajax:
+                return JsonResponse({'code': 4002, 'message': '用户不存在'})
             return redirect('/login/')
     
     return wrapper
@@ -42,8 +54,12 @@ def login_required(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not request.session.get('user_id'):
-            if request.headers.get('Content-Type') == 'application/json':
-                return JsonResponse({'success': False, 'message': '请先登录'})
+            # 检查是否为AJAX请求或API请求
+            is_ajax = (request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 
+                      request.headers.get('Content-Type') == 'application/json' or
+                      '/api/' in request.path)
+            if is_ajax:
+                return JsonResponse({'code': 4001, 'message': '请先登录'})
             return redirect('/login/')
         
         try:

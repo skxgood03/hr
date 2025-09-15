@@ -37,6 +37,12 @@
                             <i class="fas fa-user"></i> 个人中心
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'attendance:employee' in request.resolver_match.url_name %}active{% endif %}"
+                           href="{% url 'attendance:employee_attendance' %}">
+                            <i class="fas fa-clock"></i> 我的考勤
+                        </a>
+                    </li>
                 {% else %}
                     <!-- 管理员菜单 -->
                     <li class="nav-item">
@@ -55,6 +61,12 @@
                         <a class="nav-link {% if 'personal' in request.resolver_match.url_name %}active{% endif %}"
                            href="{% url 'personal_list' %}">
                             <i class="fas fa-users"></i> 个人信息管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'attendance:admin' in request.resolver_match.url_name %}active{% endif %}"
+                           href="{% url 'attendance:admin_attendance' %}">
+                            <i class="fas fa-user-clock"></i> 考勤管理
                         </a>
                     </li>
                     <li class="nav-item dropdown">

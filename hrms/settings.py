@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'personal.apps.PersonalConfig',
     'recruit.apps.RecruitConfig',
     'train.apps.TrainConfig',
+    'attendance.apps.AttendanceConfig',
     'salary_management'
 ]
 
