@@ -1,0 +1,281 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}部门工资报表 - 薪资管理系统{% endblock %}
+
+{% block page_title %}部门工资报表{% endblock %}
+
+{% block page_description %}
+<p class="text-muted">查看各部门的工资统计报表和详细数据</p>
+{% endblock %}
+
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">首页</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'salary_management:dashboard' %}">薪资管理</a></li>
+        <li class="breadcrumb-item active" aria-current="page">部门工资报表</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<!-- 查询条件 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label for="department" class="form-label">选择部门</label>
+                <select class="form-select" id="department" name="department" required>
+                    <option value="">请选择部门</option>
+                    {% for dept in departments %}
+                    <option value="{{ dept.id }}" {% if dept.id|stringformat:"s" == selected_department %}selected{% endif %}>
+                        {{ dept.departmentName }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="month" class="form-label">工资月份</label>
+                <input type="month" class="form-control" id="month" name="month" value="{{ salary_month }}">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-search me-1"></i>查询报表
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+                    <i class="fas fa-refresh me-1"></i>重置
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if report_data %}
+<!-- 统计概览 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-primary">{{ report_data.statistics.total_employees|default:0 }}</h5>
+                <p class="card-text text-muted">员工总数</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-success">¥{{ report_data.statistics.total_gross_salary|floatformat:2|default:"0.00" }}</h5>
+                <p class="card-text text-muted">应发工资总额</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-info">¥{{ report_data.statistics.total_net_salary|floatformat:2|default:"0.00" }}</h5>
+                <p class="card-text text-muted">实发工资总额</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-warning">¥{{ report_data.statistics.total_deduction|floatformat:2|default:"0.00" }}</h5>
+                <p class="card-text text-muted">扣除总额</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 平均工资统计 -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>平均应发工资</h6>
+            </div>
+            <div class="card-body text-center">
+                <h4 class="text-primary">¥{{ report_data.statistics.avg_gross_salary|floatformat:2|default:"0.00" }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>平均实发工资</h6>
+            </div>
+            <div class="card-body text-center">
+                <h4 class="text-success">¥{{ report_data.statistics.avg_net_salary|floatformat:2|default:"0.00" }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 详细工资记录 -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="fas fa-table me-2"></i>{{ report_data.department.departmentName }} - {{ report_data.salary_month|date:"Y年m月" }}工资详情
+        </h5>
+        <div>
+            <button class="btn btn-outline-success btn-sm" onclick="exportToExcel()">
+                <i class="fas fa-file-excel me-1"></i>导出Excel
+            </button>
+            <button class="btn btn-outline-primary btn-sm" onclick="printReport()">
+                <i class="fas fa-print me-1"></i>打印报表
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if report_data.salary_records %}
+        <div class="table-responsive">
+            <table class="table table-hover" id="salaryTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>序号</th>
+                        <th>员工姓名</th>
+                        <th>工号</th>
+                        <th>岗位</th>
+                        <th>基本工资</th>
+                        <th>绩效工资</th>
+                        <th>津贴补助</th>
+                        <th>应发工资</th>
+                        <th>社保扣除</th>
+                        <th>公积金扣除</th>
+                        <th>个税扣除</th>
+                        <th>其他扣除</th>
+                        <th>总扣除</th>
+                        <th>实发工资</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in report_data.salary_records %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ record.employee.name }}</td>
+                        <td>{{ record.employee.employeeId }}</td>
+                        <td>{{ record.employee.station.stationName }}</td>
+                        <td>¥{{ record.basic_salary|floatformat:2 }}</td>
+                        <td>¥{{ record.performance_salary|floatformat:2 }}</td>
+                        <td>¥{{ record.allowance|floatformat:2 }}</td>
+                        <td class="text-success fw-bold">¥{{ record.gross_salary|floatformat:2 }}</td>
+                        <td>¥{{ record.social_insurance|floatformat:2 }}</td>
+                        <td>¥{{ record.housing_fund|floatformat:2 }}</td>
+                        <td>¥{{ record.income_tax|floatformat:2 }}</td>
+                        <td>¥{{ record.other_deduction|floatformat:2 }}</td>
+                        <td class="text-warning fw-bold">¥{{ record.total_deduction|floatformat:2 }}</td>
+                        <td class="text-primary fw-bold">¥{{ record.net_salary|floatformat:2 }}</td>
+                        <td>
+                            {% if record.status == 'draft' %}
+                                <span class="badge bg-secondary">草稿</span>
+                            {% elif record.status == 'confirmed' %}
+                                <span class="badge bg-success">已确认</span>
+                            {% elif record.status == 'paid' %}
+                                <span class="badge bg-primary">已发放</span>
+                            {% else %}
+                                <span class="badge bg-light text-dark">{{ record.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr class="fw-bold">
+                        <td colspan="7" class="text-end">合计：</td>
+                        <td class="text-success">¥{{ report_data.statistics.total_gross_salary|floatformat:2 }}</td>
+                        <td colspan="4"></td>
+                        <td class="text-warning">¥{{ report_data.statistics.total_deduction|floatformat:2 }}</td>
+                        <td class="text-primary">¥{{ report_data.statistics.total_net_salary|floatformat:2 }}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <p class="text-muted">该部门在选定月份暂无工资记录</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% else %}
+<!-- 空状态 -->
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+        <h5 class="text-muted">请选择部门和月份查看工资报表</h5>
+        <p class="text-muted">选择上方的部门和工资月份，点击查询按钮生成报表</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 重置表单
+function resetForm() {
+    document.getElementById('department').value = '';
+    document.getElementById('month').value = '';
+}
+
+// 导出Excel功能
+function exportToExcel() {
+    {% if report_data %}
+    const table = document.getElementById('salaryTable');
+    const wb = XLSX.utils.table_to_book(table, {sheet: "工资报表"});
+    const filename = `{{ report_data.department.departmentName }}_{{ report_data.salary_month|date:"Y年m月" }}_工资报表.xlsx`;
+    XLSX.writeFile(wb, filename);
+    {% else %}
+    alert('请先查询报表数据');
+    {% endif %}
+}
+
+// 打印报表功能
+function printReport() {
+    {% if report_data %}
+    window.print();
+    {% else %}
+    alert('请先查询报表数据');
+    {% endif %}
+}
+
+// 页面加载完成后的初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // 设置默认月份为当前月份
+    const monthInput = document.getElementById('month');
+    if (!monthInput.value) {
+        const now = new Date();
+        const currentMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+        monthInput.value = currentMonth;
+    }
+});
+</script>
+
+<!-- 引入XLSX库用于Excel导出 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+/* 打印样式 */
+@media print {
+    .btn, .breadcrumb, .card:first-child {
+        display: none !important;
+    }
+    
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    .table {
+        font-size: 12px;
+    }
+    
+    .table th, .table td {
+        padding: 4px !important;
+    }
+}
+</style>
+{% endblock %}

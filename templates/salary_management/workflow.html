@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}工资管理系统流程图{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-sitemap me-2"></i>
+                        工资管理系统 - 整体角色操作流程图
+                    </h4>
+                </div>
+                <div class="card-body p-0">
+                    <div class="text-center" style="background-color: #f8f9fa; padding: 20px;">
+                        <img src="{% static 'images/salary_workflow.svg' %}" 
+                             alt="工资管理系统流程图" 
+                             class="img-fluid" 
+                             style="max-width: 100%; height: auto; border: 1px solid #dee2e6; border-radius: 8px; background: white;">
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <h6 class="text-primary"><i class="fas fa-user-tie me-1"></i>HR管理员</h6>
+                            <ul class="list-unstyled small">
+                                <li>• 设置薪资等级</li>
+                                <li>• 配置员工薪资</li>
+                                <li>• 批量计算工资</li>
+                                <li>• 审核工资记录</li>
+                                <li>• 生成工资报表</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-3">
+                            <h6 class="text-success"><i class="fas fa-calculator me-1"></i>财务人员</h6>
+                            <ul class="list-unstyled small">
+                                <li>• 查看工资报表</li>
+                                <li>• 核对工资数据</li>
+                                <li>• 确认发放</li>
+                                <li>• 银行转账</li>
+                                <li>• 更新发放状态</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-3">
+                            <h6 class="text-info"><i class="fas fa-users me-1"></i>员工</h6>
+                            <ul class="list-unstyled small">
+                                <li>• 查看工资单</li>
+                                <li>• 下载工资单</li>
+                                <li>• 查看历史记录</li>
+                                <li>• 申请工资调整</li>
+                                <li>• 联系HR</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-3">
+                            <h6 class="text-warning"><i class="fas fa-cogs me-1"></i>系统功能</h6>
+                            <ul class="list-unstyled small">
+                                <li>• 薪资配置管理</li>
+                                <li>• 自动工资计算</li>
+                                <li>• 数据审核流程</li>
+                                <li>• 报表生成</li>
+                                <li>• 状态跟踪</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-muted">流程说明</h6>
+                                <p class="small mb-0">
+                                    该流程图展示了工资管理系统中各个角色的操作流程和相互关系。
+                                    HR管理员负责薪资配置和审核，财务人员负责核对和发放，
+                                    员工可以查看和下载工资单。系统提供完整的数据管理和状态跟踪功能。
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-muted">操作建议</h6>
+                                <p class="small mb-0">
+                                    建议按照流程图的顺序进行操作：首先配置薪资等级和员工薪资，
+                                    然后进行工资计算和审核，最后由财务人员确认发放。
+                                    员工可以随时查看自己的工资信息。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 返回按钮 -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <a href="{% url 'salary_management:dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>返回工资管理首页
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 图片加载完成后的处理
+    $('img').on('load', function() {
+        console.log('流程图加载完成');
+    });
+    
+    // 图片点击放大功能
+    $('img').on('click', function() {
+        const src = $(this).attr('src');
+        const modal = `
+            <div class="modal fade" id="imageModal" tabindex="-1">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">工资管理系统流程图</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <img src="${src}" class="img-fluid" alt="工资管理系统流程图">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        $('body').append(modal);
+        $('#imageModal').modal('show');
+        $('#imageModal').on('hidden.bs.modal', function() {
+            $(this).remove();
+        });
+    });
+});
+</script>
+{% endblock %}

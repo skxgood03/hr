@@ -1,0 +1,885 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}个人信息管理 - 人力资源管理系统{% endblock %}
+
+{% block page_title %}个人信息管理{% endblock %}
+
+{% block page_description %}
+<p class="text-muted">管理员工个人信息和档案资料</p>
+{% endblock %}
+
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">首页</a></li>
+        <li class="breadcrumb-item active" aria-current="page">个人信息管理</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<!-- 操作工具栏 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPersonalModal">
+                        <i class="fas fa-plus"></i> 添加员工
+                    </button>
+                    <button type="button" class="btn btn-outline-success" onclick="exportExcel()">
+                        <i class="fas fa-file-excel"></i> 导出Excel
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" id="batchDeleteBtn" disabled>
+                        <i class="fas fa-trash"></i> 批量删除
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="location.reload()">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="search-box">
+                    <input type="text" class="form-control" id="searchInput" placeholder="搜索员工姓名、工号...">
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 筛选条件 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">部门筛选</label>
+                <select class="form-select" id="departmentFilter">
+                    <option value="">全部部门</option>
+                    {% for department in departments %}
+                    <option value="{{ department.id }}">{{ department.departmentName }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">性别筛选</label>
+                <select class="form-select" id="genderFilter">
+                    <option value="">全部性别</option>
+                    <option value="男">男</option>
+                    <option value="女">女</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">状态筛选</label>
+                <select class="form-select" id="statusFilter">
+                    <option value="">全部状态</option>
+                    <option value="在职">在职</option>
+                    <option value="离职">离职</option>
+                    <option value="试用期">试用期</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="button" class="btn btn-outline-primary" onclick="applyFilters()">
+                    <i class="fas fa-filter"></i> 应用筛选
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="clearFilters()">
+                    <i class="fas fa-times"></i> 清除
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 员工列表 -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-users text-primary"></i> 员工列表
+        </h5>
+        <span class="badge bg-secondary">共 {{ personals.count }} 名员工</span>
+    </div>
+    <div class="card-body p-0">
+        {% if personals %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th width="50">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="selectAll">
+                                <label class="form-check-label" for="selectAll"></label>
+                            </div>
+                        </th>
+                        <th>工号</th>
+                        <th>姓名</th>
+                        <th>性别</th>
+                        <th>年龄</th>
+                        <th>部门</th>
+                        <th>岗位</th>
+                        <th>联系电话</th>
+                        <th>状态</th>
+                        <th>入职时间</th>
+                        <th width="150">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for personal in personals %}
+                    <tr data-id="{{ personal.id }}">
+                        <td>
+                            <div class="form-check">
+                                <input class="form-check-input row-checkbox" type="checkbox" value="{{ personal.id }}">
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">{{ personal.id }}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm me-2">
+                                    <i class="fas fa-user-circle text-muted"></i>
+                                </div>
+                                <strong>{{ personal.name }}</strong>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge {% if personal.gender == 1 %}bg-info{% else %}bg-pink{% endif %}">
+                                {% if personal.gender == 1 %}男{% else %}女{% endif %}
+                            </span>
+                        </td>
+                        <td>{{ personal.age }}</td>
+                        <td>
+                            <span class="text-primary">{{ personal.station.department.departmentName|default:"未分配" }}</span>
+                        </td>
+                        <td>
+                            <span class="text-success">{{ personal.station.stationName|default:"未分配" }}</span>
+                        </td>
+                        <td>
+                            <a href="tel:{{ personal.phone }}" class="text-decoration-none">
+                                {{ personal.phone }}
+                            </a>
+                        </td>
+                        <td>
+                            {% if personal.workStatus == 1 %}
+                                <span class="badge bg-success">在职</span>
+                            {% elif personal.workStatus == 2 %}
+                                <span class="badge bg-warning">试用期</span>
+                            {% else %}
+                                <span class="badge bg-secondary">离职</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ personal.beginDate }}</small>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button type="button" class="btn btn-sm btn-outline-info" 
+                                        onclick="viewPersonal({{ personal.id }})"
+                                        data-bs-toggle="tooltip" title="查看详情">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                        onclick="editPersonal({{ personal.id }})"
+                                        data-bs-toggle="tooltip" title="编辑">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        onclick="deletePersonal({{ personal.id }}, '{{ personal.name }}')"
+                                        data-bs-toggle="tooltip" title="删除">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-users"></i>
+            <h4>暂无员工数据</h4>
+            <p>点击上方"添加员工"按钮创建第一个员工档案</p>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPersonalModal">
+                <i class="fas fa-plus"></i> 添加员工
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 添加员工模态框 -->
+<div class="modal fade" id="addPersonalModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus text-primary"></i> 添加员工
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addPersonalForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="addPersonalNumber" class="form-label">工号 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="addPersonalNumber" name="personalNumber" required>
+                            <div class="invalid-feedback">请输入工号</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="addPersonalName" class="form-label">姓名 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="addPersonalName" name="personalName" required>
+                            <div class="invalid-feedback">请输入姓名</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="addPersonalSex" class="form-label">性别 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="addPersonalSex" name="personalSex" required>
+                                <option value="">请选择性别</option>
+                                <option value="男">男</option>
+                                <option value="女">女</option>
+                            </select>
+                            <div class="invalid-feedback">请选择性别</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="addPersonalAge" class="form-label">年龄 <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="addPersonalAge" name="personalAge" min="18" max="65" required>
+                            <div class="invalid-feedback">请输入有效年龄(18-65)</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="addPersonalPhone" class="form-label">联系电话 <span class="text-danger">*</span></label>
+                            <input type="tel" class="form-control" id="addPersonalPhone" name="personalPhone" required>
+                            <div class="invalid-feedback">请输入有效的手机号码</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="addPersonalEmail" class="form-label">邮箱</label>
+                            <input type="email" class="form-control" id="addPersonalEmail" name="personalEmail">
+                            <div class="invalid-feedback">请输入有效的邮箱地址</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="addDepartmentId" class="form-label">部门</label>
+                            <select class="form-select" id="addDepartmentId" name="departmentId">
+                                <option value="">请选择部门</option>
+                                {% for department in departments %}
+                                <option value="{{ department.id }}">{{ department.departmentName }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="addStationId" class="form-label">岗位</label>
+                            <select class="form-select" id="addStationId" name="stationId">
+                                <option value="">请选择岗位</option>
+                                <!-- 岗位选项将通过JavaScript动态加载 -->
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="addPersonalEntryTime" class="form-label">入职时间 <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="addPersonalEntryTime" name="personalEntryTime" required>
+                            <div class="invalid-feedback">请选择入职时间</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="addPersonalStatus" class="form-label">状态 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="addPersonalStatus" name="personalStatus" required>
+                                <option value="">请选择状态</option>
+                                <option value="试用期">试用期</option>
+                                <option value="在职">在职</option>
+                                <option value="离职">离职</option>
+                            </select>
+                            <div class="invalid-feedback">请选择员工状态</div>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label for="addPersonalAddress" class="form-label">地址</label>
+                            <textarea class="form-control" id="addPersonalAddress" name="personalAddress" rows="2" placeholder="请输入详细地址"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 员工详情模态框 -->
+<div class="modal fade" id="viewPersonalModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user text-info"></i> 员工详情
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="personalDetailContent">
+                <!-- 员工详情内容将通过JavaScript动态加载 -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" onclick="editPersonalFromView()">
+                    <i class="fas fa-edit"></i> 编辑
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑员工模态框 -->
+<div class="modal fade" id="editPersonalModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit text-primary"></i> 编辑员工
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editPersonalForm">
+                <div class="modal-body">
+                    <input type="hidden" id="editPersonalId" name="id">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editPersonalNumber" class="form-label">工号 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="editPersonalNumber" name="personalNumber" required>
+                            <div class="invalid-feedback">请输入工号</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editPersonalName" class="form-label">姓名 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="editPersonalName" name="personalName" required>
+                            <div class="invalid-feedback">请输入姓名</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editPersonalSex" class="form-label">性别 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="editPersonalSex" name="personalSex" required>
+                                <option value="">请选择性别</option>
+                                <option value="男">男</option>
+                                <option value="女">女</option>
+                            </select>
+                            <div class="invalid-feedback">请选择性别</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editPersonalAge" class="form-label">年龄 <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="editPersonalAge" name="personalAge" min="18" max="65" required>
+                            <div class="invalid-feedback">请输入有效年龄(18-65)</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editPersonalPhone" class="form-label">联系电话 <span class="text-danger">*</span></label>
+                            <input type="tel" class="form-control" id="editPersonalPhone" name="personalPhone" required>
+                            <div class="invalid-feedback">请输入有效的手机号码</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editPersonalEmail" class="form-label">邮箱</label>
+                            <input type="email" class="form-control" id="editPersonalEmail" name="personalEmail">
+                            <div class="invalid-feedback">请输入有效的邮箱地址</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editPersonalDepartment" class="form-label">部门</label>
+                            <select class="form-select" id="editPersonalDepartment" name="departmentId">
+                                <option value="">请选择部门</option>
+                                {% for department in departments %}
+                                <option value="{{ department.id }}">{{ department.departmentName }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editPersonalStation" class="form-label">岗位</label>
+                            <select class="form-select" id="editPersonalStation" name="stationId">
+                                <option value="">请选择岗位</option>
+                                <!-- 岗位选项将通过JavaScript动态加载 -->
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editPersonalEntryTime" class="form-label">入职时间 <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="editPersonalEntryTime" name="personalEntryTime" required>
+                            <div class="invalid-feedback">请选择入职时间</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editPersonalStatus" class="form-label">状态 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="editPersonalStatus" name="personalStatus" required>
+                                <option value="">请选择状态</option>
+                                <option value="试用期">试用期</option>
+                                <option value="在职">在职</option>
+                                <option value="离职">离职</option>
+                            </select>
+                            <div class="invalid-feedback">请选择员工状态</div>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label for="editPersonalAddress" class="form-label">地址</label>
+                            <textarea class="form-control" id="editPersonalAddress" name="personalAddress" rows="2" placeholder="请输入详细地址"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 保存修改
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.bg-pink {
+    background-color: #e91e63 !important;
+}
+
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+.personal-detail-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.personal-detail-item:last-child {
+    border-bottom: none;
+}
+
+.personal-detail-label {
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.personal-detail-value {
+    color: #333;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 初始化工具提示
+    $('[data-bs-toggle="tooltip"]').tooltip();
+    
+    // 设置默认入职时间为今天
+    $('#addPersonalEntryTime').val(new Date().toISOString().split('T')[0]);
+    
+    // 搜索功能
+    $('#searchInput').on('input', function() {
+        const searchTerm = $(this).val().toLowerCase();
+        $('tbody tr').each(function() {
+            const personalName = $(this).find('td:nth-child(3)').text().toLowerCase();
+            const personalNumber = $(this).find('td:nth-child(2)').text().toLowerCase();
+            const isVisible = personalName.includes(searchTerm) || personalNumber.includes(searchTerm);
+            $(this).toggle(isVisible);
+        });
+    });
+    
+    // 全选功能
+    $('#selectAll').change(function() {
+        $('.row-checkbox').prop('checked', $(this).prop('checked'));
+        updateBatchDeleteButton();
+    });
+    
+    // 单选功能
+    $(document).on('change', '.row-checkbox', function() {
+        updateBatchDeleteButton();
+        const totalCheckboxes = $('.row-checkbox').length;
+        const checkedCheckboxes = $('.row-checkbox:checked').length;
+        $('#selectAll').prop('checked', totalCheckboxes === checkedCheckboxes);
+    });
+    
+    // 更新批量删除按钮状态
+    function updateBatchDeleteButton() {
+        const checkedCount = $('.row-checkbox:checked').length;
+        $('#batchDeleteBtn').prop('disabled', checkedCount === 0);
+    }
+    
+    // 部门选择变化时加载对应岗位
+    $('#addDepartmentId').change(function() {
+        const departmentId = $(this).val();
+        loadStations(departmentId, '#addStationId');
+    });
+    
+    // 表单验证
+    $('#addPersonalForm').submit(function(e) {
+        e.preventDefault();
+        
+        // 基本验证
+        let isValid = true;
+        const requiredFields = ['personalNumber', 'personalName', 'personalSex', 'personalAge', 'personalPhone', 'personalEntryTime', 'personalStatus'];
+        
+        requiredFields.forEach(field => {
+            const input = $(`#add${field.charAt(0).toUpperCase() + field.slice(1)}`);
+            if (!input.val().trim()) {
+                input.addClass('is-invalid');
+                isValid = false;
+            } else {
+                input.removeClass('is-invalid');
+            }
+        });
+        
+        // 手机号验证
+        const phone = $('#addPersonalPhone').val();
+        if (phone && !/^1[3-9]\d{9}$/.test(phone)) {
+            $('#addPersonalPhone').addClass('is-invalid');
+            isValid = false;
+        }
+        
+        // 邮箱验证
+        const email = $('#addPersonalEmail').val();
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            $('#addPersonalEmail').addClass('is-invalid');
+            isValid = false;
+        }
+        
+        if (!isValid) return;
+        
+        // 收集表单数据
+        const formData = {
+            personalNumber: $('#addPersonalNumber').val().trim(),
+            personalName: $('#addPersonalName').val().trim(),
+            personalSex: $('#addPersonalSex').val(),
+            personalAge: parseInt($('#addPersonalAge').val()),
+            personalPhone: $('#addPersonalPhone').val().trim(),
+            personalEmail: $('#addPersonalEmail').val().trim(),
+            departmentId: $('#addDepartmentId').val() || null,
+            stationId: $('#addStationId').val() || null,
+            personalEntryTime: $('#addPersonalEntryTime').val(),
+            personalStatus: $('#addPersonalStatus').val(),
+            personalAddress: $('#addPersonalAddress').val().trim()
+        };
+        
+        // AJAX请求添加员工
+        $.ajax({
+            url: '/personal/add/',
+            method: 'POST',
+            data: JSON.stringify(formData),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': $('meta[name=csrf-token]').attr('content')
+            },
+            success: function(response) {
+                if (response.code === 2000) {
+                    $('#addPersonalModal').modal('hide');
+                    showMessage('员工添加成功！', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showMessage(response.msg || '添加失败', 'error');
+                }
+            },
+            error: function() {
+                showMessage('网络错误，请稍后重试', 'error');
+            }
+        });
+    });
+    
+    // 清除表单验证状态
+    $('.modal').on('hidden.bs.modal', function() {
+        $(this).find('form')[0].reset();
+        $(this).find('.is-invalid').removeClass('is-invalid');
+        // 重置入职时间为今天
+        $('#addPersonalEntryTime').val(new Date().toISOString().split('T')[0]);
+    });
+});
+
+// 加载岗位列表
+function loadStations(departmentId, targetSelect) {
+    const $select = $(targetSelect);
+    $select.html('<option value="">请选择岗位</option>');
+    
+    if (!departmentId) return;
+    
+    $.ajax({
+        url: '/station/getStations/',
+        method: 'GET',
+        data: { departmentId: departmentId },
+        success: function(response) {
+            if (response.code === 2000 && response.data) {
+                response.data.forEach(station => {
+                    $select.append(`<option value="${station.id}">${station.stationName}</option>`);
+                });
+            }
+        },
+        error: function() {
+            console.error('加载岗位失败');
+        }
+    });
+}
+
+// 查看员工详情
+function viewPersonal(id) {
+    // 跳转到员工详情页面
+    window.location.href = `/department/employee/${id}/`;
+}
+
+// 编辑员工
+function editPersonal(id) {
+            // 首先获取员工详细信息
+            $.ajax({
+                url: `/personal/detail/${id}/`,
+                type: 'GET',
+                headers: {
+                    'X-CSRFToken': $('meta[name=csrf-token]').attr('content')
+                },
+                success: function(response) {
+                    if (response.code === 2000) {
+                        const data = response.data;
+                        // 填充编辑表单
+                        $('#editPersonalId').val(data.id);
+                        $('#editPersonalNumber').val(data.personalNumber);
+                        $('#editPersonalName').val(data.personalName);
+                        $('#editPersonalSex').val(data.personalSex);
+                        $('#editPersonalAge').val(data.personalAge);
+                        $('#editPersonalPhone').val(data.personalPhone);
+                        $('#editPersonalEmail').val(data.personalEmail);
+                        $('#editPersonalDepartment').val(data.departmentId);
+                        
+                        // 加载对应部门的岗位
+                        if (data.departmentId) {
+                            loadStationsForEdit(data.departmentId, data.stationId);
+                        }
+                        
+                        $('#editPersonalEntryTime').val(data.personalEntryTime);
+                        $('#editPersonalStatus').val(data.personalStatus);
+                        $('#editPersonalAddress').val(data.personalAddress);
+                        
+                        // 显示编辑模态框
+                        $('#editPersonalModal').modal('show');
+                    } else {
+                        showMessage('获取员工信息失败：' + response.msg, 'error');
+                    }
+                },
+                error: function() {
+                    showMessage('获取员工信息失败，请重试', 'error');
+                }
+            });
+        }
+        
+        // 为编辑表单加载岗位
+        function loadStationsForEdit(departmentId, selectedStationId) {
+            $.ajax({
+                url: `/station/getStations/`,
+                type: 'GET',
+                data: { departmentId: departmentId },
+                success: function(response) {
+                    if (response.code === 2000) {
+                        const stationSelect = $('#editPersonalStation');
+                        stationSelect.empty();
+                        stationSelect.append('<option value="">请选择岗位</option>');
+                        
+                        response.data.forEach(function(station) {
+                            const selected = station.id == selectedStationId ? 'selected' : '';
+                            stationSelect.append(`<option value="${station.id}" ${selected}>${station.stationName}</option>`);
+                        });
+                    }
+                },
+                error: function() {
+                    console.error('加载岗位失败');
+                }
+            });
+        }
+        
+        // 编辑表单部门变化事件
+        $('#editPersonalDepartment').change(function() {
+            const departmentId = $(this).val();
+            const stationSelect = $('#editPersonalStation');
+            
+            stationSelect.empty();
+            stationSelect.append('<option value="">请选择岗位</option>');
+            
+            if (departmentId) {
+                loadStationsForEdit(departmentId, null);
+            }
+        });
+        
+        // 编辑表单提交
+        $('#editPersonalForm').submit(function(e) {
+            e.preventDefault();
+            
+            // 表单验证
+            if (!validateEditForm()) {
+                return;
+            }
+            
+            const formData = {
+                id: $('#editPersonalId').val(),
+                personalNumber: $('#editPersonalNumber').val(),
+                personalName: $('#editPersonalName').val(),
+                personalSex: $('#editPersonalSex').val(),
+                personalAge: $('#editPersonalAge').val(),
+                personalPhone: $('#editPersonalPhone').val(),
+                personalEmail: $('#editPersonalEmail').val(),
+                departmentId: $('#editPersonalDepartment').val(),
+                stationId: $('#editPersonalStation').val(),
+                personalEntryTime: $('#editPersonalEntryTime').val(),
+                personalStatus: $('#editPersonalStatus').val(),
+                personalAddress: $('#editPersonalAddress').val()
+            };
+            
+            $.ajax({
+                url: '/personal/update/',
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': $('meta[name=csrf-token]').attr('content'),
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(formData),
+                success: function(response) {
+                    if (response.code === 2000) {
+                        showMessage('员工信息更新成功', 'success');
+                        $('#editPersonalModal').modal('hide');
+                        location.reload(); // 刷新页面显示最新数据
+                    } else {
+                        showMessage('更新失败：' + response.msg, 'error');
+                    }
+                },
+                error: function() {
+                    showMessage('更新失败，请重试', 'error');
+                }
+            });
+        });
+        
+        // 编辑表单验证
+        function validateEditForm() {
+            let isValid = true;
+            
+            // 清除之前的验证状态
+            $('#editPersonalForm .form-control, #editPersonalForm .form-select').removeClass('is-invalid');
+            
+            // 验证必填字段
+            const requiredFields = [
+                { id: '#editPersonalNumber', name: '工号' },
+                { id: '#editPersonalName', name: '姓名' },
+                { id: '#editPersonalSex', name: '性别' },
+                { id: '#editPersonalAge', name: '年龄' },
+                { id: '#editPersonalPhone', name: '联系电话' },
+                { id: '#editPersonalEntryTime', name: '入职时间' },
+                { id: '#editPersonalStatus', name: '状态' }
+            ];
+            
+            requiredFields.forEach(function(field) {
+                if (!$(field.id).val().trim()) {
+                    $(field.id).addClass('is-invalid');
+                    isValid = false;
+                }
+            });
+            
+            // 验证手机号格式
+            const phone = $('#editPersonalPhone').val();
+            if (phone && !/^1[3-9]\d{9}$/.test(phone)) {
+                $('#editPersonalPhone').addClass('is-invalid');
+                isValid = false;
+            }
+            
+            // 验证邮箱格式
+            const email = $('#editPersonalEmail').val();
+            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                $('#editPersonalEmail').addClass('is-invalid');
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+
+// 从详情页面编辑
+function editPersonalFromView() {
+    const personalId = $('#viewPersonalModal').data('personal-id');
+    $('#viewPersonalModal').modal('hide');
+    setTimeout(() => editPersonal(personalId), 300);
+}
+
+// 删除员工
+function deletePersonal(id, name) {
+    if (confirm(`确定要删除员工"${name}"吗？\n\n注意：删除后将无法恢复相关数据。`)) {
+        $.ajax({
+            url: '/personal/delete/',
+            method: 'POST',
+            data: JSON.stringify({ id: id }),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': $('meta[name=csrf-token]').attr('content')
+            },
+            success: function(response) {
+                if (response.code === 2000) {
+                    showMessage('员工删除成功！', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showMessage(response.msg || '删除失败', 'error');
+                }
+            },
+            error: function() {
+                showMessage('网络错误，请稍后重试', 'error');
+            }
+        });
+    }
+}
+
+// 应用筛选
+function applyFilters() {
+    const departmentFilter = $('#departmentFilter').val();
+    const genderFilter = $('#genderFilter').val();
+    const statusFilter = $('#statusFilter').val();
+    
+    $('tbody tr').each(function() {
+        let isVisible = true;
+        
+        // 部门筛选
+        if (departmentFilter) {
+            const departmentText = $(this).find('td:nth-child(6)').text().trim();
+            // 这里需要根据实际的部门ID进行匹配，暂时用文本匹配
+            // isVisible = isVisible && departmentText.includes(departmentFilter);
+        }
+        
+        // 性别筛选
+        if (genderFilter) {
+            const genderText = $(this).find('td:nth-child(4) .badge').text().trim();
+            isVisible = isVisible && genderText === genderFilter;
+        }
+        
+        // 状态筛选
+        if (statusFilter) {
+            const statusText = $(this).find('td:nth-child(9) .badge').text().trim();
+            isVisible = isVisible && statusText === statusFilter;
+        }
+        
+        $(this).toggle(isVisible);
+    });
+}
+
+// 清除筛选
+function clearFilters() {
+    $('#departmentFilter, #genderFilter, #statusFilter').val('');
+    $('tbody tr').show();
+}
+
+// 导出Excel
+function exportExcel() {
+    // 获取当前筛选条件
+    const name = $('#nameSearch').val();
+    const departmentId = $('#departmentFilter').val();
+    const workStatus = $('#statusFilter').val();
+    
+    // 构建URL参数
+    let params = new URLSearchParams();
+    if (name) params.append('name', name);
+    if (departmentId) params.append('departmentId', departmentId);
+    if (workStatus) params.append('workStatus', workStatus);
+    
+    // 构建完整URL
+    const url = '/personal/export/excel/?' + params.toString();
+    
+    // 创建隐藏的下载链接
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = '';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+</script>
+{% endblock %}

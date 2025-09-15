@@ -1,0 +1,8 @@
+{
+  "env": {
+    "HTTP_PROXY": "http://127.0.0.1:10809",
+    "HTTPS_PROXY": "http://127.0.0.1:10809",
+    "ANTHROPIC_BASE_URL":"https://open.bigmodel.cn/api/anthropic",
+    "ANTHROPIC_AUTH_TOKEN":"050c088097c746a6be5fd4ccfd02ca4c.oXojyHgCKCN99ktM"
+  }
+}

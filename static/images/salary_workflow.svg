@@ -1,0 +1,188 @@
+<svg width="1200" height="800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .title { font-family: Arial, sans-serif; font-size: 24px; font-weight: bold; fill: #2c3e50; }
+      .role-title { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; fill: #34495e; }
+      .step-text { font-family: Arial, sans-serif; font-size: 14px; fill: #2c3e50; }
+      .role-box { fill: #ecf0f1; stroke: #bdc3c7; stroke-width: 2; }
+      .process-box { fill: #3498db; stroke: #2980b9; stroke-width: 2; }
+      .decision-diamond { fill: #e74c3c; stroke: #c0392b; stroke-width: 2; }
+      .data-box { fill: #2ecc71; stroke: #27ae60; stroke-width: 2; }
+      .arrow { stroke: #34495e; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .white-text { fill: white; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#34495e" />
+    </marker>
+  </defs>
+  
+  <!-- 标题 -->
+  <text x="600" y="30" text-anchor="middle" class="title">工资管理系统 - 整体角色操作流程图</text>
+  
+  <!-- HR管理员角色区域 -->
+  <rect x="50" y="60" width="300" height="320" class="role-box" rx="10"/>
+  <text x="200" y="85" text-anchor="middle" class="role-title">HR管理员</text>
+  
+  <!-- HR管理员流程步骤 -->
+  <rect x="70" y="100" width="120" height="40" class="process-box" rx="5"/>
+  <text x="130" y="125" text-anchor="middle" class="step-text white-text">设置薪资等级</text>
+  
+  <rect x="210" y="100" width="120" height="40" class="process-box" rx="5"/>
+  <text x="270" y="125" text-anchor="middle" class="step-text white-text">配置员工薪资</text>
+  
+  <rect x="70" y="160" width="120" height="40" class="process-box" rx="5"/>
+  <text x="130" y="185" text-anchor="middle" class="step-text white-text">批量计算工资</text>
+  
+  <rect x="210" y="160" width="120" height="40" class="process-box" rx="5"/>
+  <text x="270" y="185" text-anchor="middle" class="step-text white-text">审核工资记录</text>
+  
+  <polygon points="140,220 180,240 140,260 100,240" class="decision-diamond"/>
+  <text x="140" y="245" text-anchor="middle" class="step-text white-text">审核通过?</text>
+  
+  <rect x="70" y="280" width="120" height="40" class="process-box" rx="5"/>
+  <text x="130" y="305" text-anchor="middle" class="step-text white-text">调整工资记录</text>
+  
+  <rect x="210" y="280" width="120" height="40" class="process-box" rx="5"/>
+  <text x="270" y="305" text-anchor="middle" class="step-text white-text">生成工资报表</text>
+  
+  <!-- 财务人员角色区域 -->
+  <rect x="400" y="60" width="300" height="320" class="role-box" rx="10"/>
+  <text x="550" y="85" text-anchor="middle" class="role-title">财务人员</text>
+  
+  <!-- 财务人员流程步骤 -->
+  <rect x="420" y="100" width="120" height="40" class="process-box" rx="5"/>
+  <text x="480" y="125" text-anchor="middle" class="step-text white-text">查看工资报表</text>
+  
+  <rect x="560" y="100" width="120" height="40" class="process-box" rx="5"/>
+  <text x="620" y="125" text-anchor="middle" class="step-text white-text">核对工资数据</text>
+  
+  <polygon points="490,160 530,180 490,200 450,180" class="decision-diamond"/>
+  <text x="490" y="185" text-anchor="middle" class="step-text white-text">数据正确?</text>
+  
+  <rect x="420" y="220" width="120" height="40" class="process-box" rx="5"/>
+  <text x="480" y="245" text-anchor="middle" class="step-text white-text">反馈问题</text>
+  
+  <rect x="560" y="220" width="120" height="40" class="process-box" rx="5"/>
+  <text x="620" y="245" text-anchor="middle" class="step-text white-text">确认发放</text>
+  
+  <rect x="420" y="280" width="120" height="40" class="process-box" rx="5"/>
+  <text x="480" y="305" text-anchor="middle" class="step-text white-text">银行转账</text>
+  
+  <rect x="560" y="280" width="120" height="40" class="process-box" rx="5"/>
+  <text x="620" y="305" text-anchor="middle" class="step-text white-text">更新发放状态</text>
+  
+  <!-- 员工角色区域 -->
+  <rect x="750" y="60" width="300" height="320" class="role-box" rx="10"/>
+  <text x="900" y="85" text-anchor="middle" class="role-title">员工</text>
+  
+  <!-- 员工流程步骤 -->
+  <rect x="770" y="100" width="120" height="40" class="process-box" rx="5"/>
+  <text x="830" y="125" text-anchor="middle" class="step-text white-text">查看工资单</text>
+  
+  <rect x="910" y="100" width="120" height="40" class="process-box" rx="5"/>
+  <text x="970" y="125" text-anchor="middle" class="step-text white-text">下载工资单</text>
+  
+  <rect x="770" y="160" width="120" height="40" class="process-box" rx="5"/>
+  <text x="830" y="185" text-anchor="middle" class="step-text white-text">查看历史记录</text>
+  
+  <rect x="910" y="160" width="120" height="40" class="process-box" rx="5"/>
+  <text x="970" y="185" text-anchor="middle" class="step-text white-text">申请工资调整</text>
+  
+  <polygon points="840,220 880,240 840,260 800,240" class="decision-diamond"/>
+  <text x="840" y="245" text-anchor="middle" class="step-text white-text">有疑问?</text>
+  
+  <rect x="770" y="280" width="120" height="40" class="process-box" rx="5"/>
+  <text x="830" y="305" text-anchor="middle" class="step-text white-text">联系HR</text>
+  
+  <rect x="910" y="280" width="120" height="40" class="process-box" rx="5"/>
+  <text x="970" y="305" text-anchor="middle" class="step-text white-text">确认收到</text>
+  
+  <!-- 数据库 -->
+  <rect x="450" y="420" width="200" height="80" class="data-box" rx="10"/>
+  <text x="550" y="445" text-anchor="middle" class="role-title">数据库</text>
+  <text x="470" y="465" class="step-text">• 薪资等级表</text>
+  <text x="470" y="480" class="step-text">• 员工薪资配置表</text>
+  <text x="470" y="495" class="step-text">• 月度工资记录表</text>
+  
+  <!-- 系统核心流程 -->
+  <rect x="100" y="550" width="1000" height="200" class="role-box" rx="10"/>
+  <text x="600" y="575" text-anchor="middle" class="role-title">系统核心业务流程</text>
+  
+  <!-- 核心流程步骤 -->
+  <rect x="120" y="590" width="100" height="40" class="process-box" rx="5"/>
+  <text x="170" y="615" text-anchor="middle" class="step-text white-text">薪资配置</text>
+  
+  <rect x="250" y="590" width="100" height="40" class="process-box" rx="5"/>
+  <text x="300" y="615" text-anchor="middle" class="step-text white-text">工资计算</text>
+  
+  <rect x="380" y="590" width="100" height="40" class="process-box" rx="5"/>
+  <text x="430" y="615" text-anchor="middle" class="step-text white-text">数据审核</text>
+  
+  <rect x="510" y="590" width="100" height="40" class="process-box" rx="5"/>
+  <text x="560" y="615" text-anchor="middle" class="step-text white-text">报表生成</text>
+  
+  <rect x="640" y="590" width="100" height="40" class="process-box" rx="5"/>
+  <text x="690" y="615" text-anchor="middle" class="step-text white-text">工资发放</text>
+  
+  <rect x="770" y="590" width="100" height="40" class="process-box" rx="5"/>
+  <text x="820" y="615" text-anchor="middle" class="step-text white-text">状态更新</text>
+  
+  <rect x="900" y="590" width="100" height="40" class="process-box" rx="5"/>
+  <text x="950" y="615" text-anchor="middle" class="step-text white-text">员工查询</text>
+  
+  <!-- 箭头连接 -->
+  <!-- HR管理员内部流程 -->
+  <line x1="190" y1="120" x2="210" y2="120" class="arrow"/>
+  <line x1="130" y1="140" x2="130" y2="160" class="arrow"/>
+  <line x1="270" y1="140" x2="270" y2="160" class="arrow"/>
+  <line x1="190" y1="180" x2="210" y2="180" class="arrow"/>
+  <line x1="140" y1="200" x2="140" y2="220" class="arrow"/>
+  <line x1="100" y1="240" x2="70" y2="240" class="arrow"/>
+  <line x1="130" y1="260" x2="130" y2="280" class="arrow"/>
+  <line x1="180" y1="240" x2="210" y2="240" class="arrow"/>
+  <line x1="270" y1="260" x2="270" y2="280" class="arrow"/>
+  
+  <!-- 财务人员内部流程 -->
+  <line x1="540" y1="120" x2="560" y2="120" class="arrow"/>
+  <line x1="490" y1="140" x2="490" y2="160" class="arrow"/>
+  <line x1="450" y1="180" x2="420" y2="180" class="arrow"/>
+  <line x1="480" y1="200" x2="480" y2="220" class="arrow"/>
+  <line x1="530" y1="180" x2="560" y2="180" class="arrow"/>
+  <line x1="620" y1="200" x2="620" y2="220" class="arrow"/>
+  <line x1="540" y1="240" x2="560" y2="240" class="arrow"/>
+  <line x1="480" y1="260" x2="480" y2="280" class="arrow"/>
+  <line x1="620" y1="260" x2="620" y2="280" class="arrow"/>
+  
+  <!-- 员工内部流程 -->
+  <line x1="890" y1="120" x2="910" y2="120" class="arrow"/>
+  <line x1="890" y1="160" x2="910" y2="160" class="arrow"/>
+  <line x1="840" y1="200" x2="840" y2="220" class="arrow"/>
+  <line x1="800" y1="240" x2="770" y2="240" class="arrow"/>
+  <line x1="830" y1="260" x2="830" y2="280" class="arrow"/>
+  <line x1="880" y1="240" x2="910" y2="240" class="arrow"/>
+  <line x1="970" y1="260" x2="970" y2="280" class="arrow"/>
+  
+  <!-- 角色间连接 -->
+  <line x1="350" y1="200" x2="400" y2="200" class="arrow"/>
+  <line x1="700" y1="200" x2="750" y2="200" class="arrow"/>
+  
+  <!-- 连接到数据库 -->
+  <line x1="200" y1="380" x2="500" y2="420" class="arrow"/>
+  <line x1="550" y1="380" x2="550" y2="420" class="arrow"/>
+  <line x1="900" y1="380" x2="600" y2="420" class="arrow"/>
+  
+  <!-- 核心流程连接 -->
+  <line x1="220" y1="610" x2="250" y2="610" class="arrow"/>
+  <line x1="350" y1="610" x2="380" y2="610" class="arrow"/>
+  <line x1="480" y1="610" x2="510" y2="610" class="arrow"/>
+  <line x1="610" y1="610" x2="640" y2="610" class="arrow"/>
+  <line x1="740" y1="610" x2="770" y2="610" class="arrow"/>
+  <line x1="870" y1="610" x2="900" y2="610" class="arrow"/>
+  
+  <!-- 说明文字 -->
+  <text x="50" y="730" class="step-text">说明：</text>
+  <text x="50" y="750" class="step-text">• 蓝色方框：处理步骤</text>
+  <text x="250" y="750" class="step-text">• 红色菱形：决策点</text>
+  <text x="400" y="750" class="step-text">• 绿色方框：数据存储</text>
+  <text x="600" y="750" class="step-text">• 灰色区域：角色职责范围</text>
+</svg>

@@ -1,0 +1,607 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}工资计算 - 前钱人力资源管理系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2 class="mb-0">工资计算</h2>
+            <p class="text-muted">批量计算员工月度工资</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <a href="{% url 'salary_management:dashboard' %}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-arrow-left me-1"></i>返回首页
+            </a>
+            <a href="{% url 'salary_management:monthly_list' %}" class="btn btn-info">
+                <i class="fas fa-list me-1"></i>查看记录
+            </a>
+        </div>
+    </div>
+
+    <!-- 计算参数设置 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">计算参数设置</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="calculateForm">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="salary_month" class="form-label">工资月份 <span class="text-danger">*</span></label>
+                                <input type="month" class="form-control" id="salary_month" name="salary_month" 
+                                       value="{{ current_month }}" required>
+                                <div class="form-text">选择要计算工资的月份</div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">计算范围</label>
+                                <div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="calculate_type" 
+                                               id="calculate_all" value="all" checked>
+                                        <label class="form-check-label" for="calculate_all">
+                                            计算所有员工
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="calculate_type" 
+                                               id="calculate_selected" value="selected">
+                                        <label class="form-check-label" for="calculate_selected">
+                                            计算选定员工
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">计算选项</label>
+                                <div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="overwrite_existing" 
+                                               name="overwrite_existing" value="1">
+                                        <label class="form-check-label" for="overwrite_existing">
+                                            覆盖已有记录
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="auto_confirm" 
+                                               name="auto_confirm" value="1">
+                                        <label class="form-check-label" for="auto_confirm">
+                                            自动确认状态
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary btn-lg me-2" id="calculateBtn">
+                                    <i class="fas fa-calculator me-1"></i>开始计算
+                                </button>
+                                <button type="button" class="btn btn-outline-info" id="previewBtn" onclick="previewCalculation()">
+                                    <i class="fas fa-eye me-1"></i>预览计算
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 员工选择区域 -->
+    <div class="row mb-4" id="employeeSelection" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">选择员工</h5>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllEmployees()">
+                            全选
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAllEmployees()">
+                            清空
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <input type="text" class="form-control" id="employeeSearch" 
+                                   placeholder="搜索员工姓名或工号" onkeyup="filterEmployees()">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <select class="form-select" id="departmentFilter" onchange="filterEmployees()">
+                                <option value="">全部部门</option>
+                                {% for dept in departments %}
+                                <option value="{{ dept.id }}">{{ dept.departmentName }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row" id="employeeList">
+                        {% for employee in employees %}
+                        <div class="col-md-4 mb-3 employee-item" 
+                             data-name="{{ employee.name }}" 
+                             data-id="{{ employee.employeeId }}"
+                             data-department="{{ employee.station.department.id|default:'' }}">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input employee-checkbox" type="checkbox" 
+                                               name="employee_ids" value="{{ employee.id }}" 
+                                               id="emp_{{ employee.id }}">
+                                        <label class="form-check-label" for="emp_{{ employee.id }}">
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                                    {{ employee.name|first }}
+                                                </div>
+                                                <div>
+                                                    <div class="fw-bold">{{ employee.name }}</div>
+                                                    <small class="text-muted">{{ employee.employeeId }}</small>
+                                                    <br>
+                                                    <small class="text-muted">{{ employee.station.department.departmentName|default:'未分配部门' }}</small>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 计算进度 -->
+    <div class="row mb-4" id="progressSection" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">计算进度</h5>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" style="width: 0%" 
+                             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="progressBar">
+                            0%
+                        </div>
+                    </div>
+                    <div id="progressText">准备开始计算...</div>
+                    <div id="progressDetails" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 计算结果 -->
+    <div class="row" id="resultSection" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">计算结果</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-success" id="successCount">0</h4>
+                                <p class="mb-0 text-muted">成功计算</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-danger" id="errorCount">0</h4>
+                                <p class="mb-0 text-muted">计算失败</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-info" id="totalAmount">¥0.00</h4>
+                                <p class="mb-0 text-muted">应发总额</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-primary" id="netAmount">¥0.00</h4>
+                                <p class="mb-0 text-muted">实发总额</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="errorList" style="display: none;">
+                        <h6 class="text-danger">计算错误详情：</h6>
+                        <ul id="errorDetails" class="list-unstyled"></ul>
+                    </div>
+                    
+                    <div class="text-center mt-3">
+                        <a href="{% url 'salary_management:monthly_list' %}" class="btn btn-primary">
+                            <i class="fas fa-list me-1"></i>查看计算结果
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 监听计算类型变化
+    $('input[name="calculate_type"]').change(function() {
+        if ($(this).val() === 'selected') {
+            $('#employeeSelection').show();
+        } else {
+            $('#employeeSelection').hide();
+        }
+    });
+    
+    // 表单提交处理
+    $('#calculateForm').submit(function(e) {
+        e.preventDefault(); // 阻止默认提交
+        
+        const calculateType = $('input[name="calculate_type"]:checked').val();
+        const salaryMonth = $('#salary_month').val();
+        
+        if (!salaryMonth) {
+            alert('请选择工资月份');
+            return;
+        }
+        
+        if (calculateType === 'selected') {
+            const selectedEmployees = $('.employee-checkbox:checked');
+            if (selectedEmployees.length === 0) {
+                alert('请选择要计算的员工');
+                return;
+            }
+        }
+        
+        // 显示进度区域
+        $('#progressSection').show();
+        $('#resultSection').hide();
+        $('#calculateBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>计算中...');
+        $('#progressText').text('正在提交计算请求...');
+        
+        // 构建提交数据
+        const submitData = {
+            'salary_month': salaryMonth,
+            'calculate_type': calculateType,
+            'overwrite_existing': $('#overwrite_existing').is(':checked') ? '1' : '',
+            'auto_confirm': $('#auto_confirm').is(':checked') ? '1' : '',
+            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+        };
+        
+        // 如果选择指定员工，添加employee_ids列表
+        if (calculateType === 'selected') {
+            const selectedEmployeeIds = [];
+            $('.employee-checkbox:checked').each(function() {
+                selectedEmployeeIds.push($(this).val());
+            });
+            submitData['employee_ids'] = selectedEmployeeIds;
+        }
+        
+        $.ajax({
+            url: $(this).attr('action') || window.location.pathname,
+            type: 'POST',
+            data: submitData,
+            traditional: true,  // 确保数组参数正确传递
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            success: function(response) {
+                if (response.success) {
+                    // 开始显示计算进度
+                    simulateCalculationProgress(response.results_count, response.errors);
+                } else {
+                    showCalculationError(response.error);
+                }
+            },
+            error: function(xhr, status, error) {
+                let errorMsg = '计算失败';
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMsg = xhr.responseJSON.error;
+                } else {
+                    errorMsg += ': ' + error;
+                }
+                showCalculationError(errorMsg);
+            }
+        });
+    });
+});
+
+// 模拟计算进度
+function simulateCalculationProgress(resultsCount, errors) {
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += Math.random() * 15 + 5; // 每次增加5-20%
+        if (progress > 100) progress = 100;
+        
+        $('#progressBar').css('width', progress + '%').text(Math.round(progress) + '%');
+        $('#progressText').text(`正在计算工资... ${Math.round(progress)}%`);
+        
+        if (progress >= 100) {
+            clearInterval(interval);
+            $('#progressText').text('计算完成！正在生成结果...');
+            setTimeout(() => {
+                showCalculationSuccess(resultsCount, errors);
+            }, 1000);
+        }
+    }, 300);
+}
+
+// 显示计算成功结果
+function showCalculationSuccess(resultsCount, errors) {
+    $('#progressSection').hide();
+    $('#resultSection').show();
+    $('#calculateBtn').prop('disabled', false).html('<i class="fas fa-calculator me-1"></i>开始计算');
+    
+    // 显示计算结果
+    if (resultsCount > 0) {
+        $('#successCount').text(resultsCount);
+    } else {
+        $('#successCount').text('0');
+    }
+    
+    // 显示错误数量
+    if (errors && errors.length > 0) {
+        $('#errorCount').text(errors.length);
+        $('#errorList').show();
+        let errorHtml = '';
+        errors.forEach(error => {
+            errorHtml += `<li class="text-danger">• ${error}</li>`;
+        });
+        $('#errorDetails').html(errorHtml);
+    } else {
+        $('#errorCount').text('0');
+    }
+    
+    // 3秒后跳转到月度工资列表
+    setTimeout(() => {
+        window.location.href = '/salary/monthly/';
+    }, 3000);
+}
+
+// 显示计算错误
+function showCalculationError(errorMsg) {
+    $('#progressText').text('计算失败: ' + errorMsg);
+    $('#calculateBtn').prop('disabled', false).html('<i class="fas fa-calculator me-1"></i>开始计算');
+}
+
+// 显示计算结果
+function showCalculationResult() {
+    $('#progressSection').hide();
+    $('#resultSection').show();
+    $('#calculateBtn').prop('disabled', false);
+    
+    // 模拟结果数据
+    $('#successCount').text('25');
+    $('#errorCount').text('2');
+    $('#totalAmount').text('¥125,000.00');
+    $('#netAmount').text('¥98,750.00');
+    
+    // 如果有错误，显示错误详情
+    if (Math.random() > 0.7) {
+        $('#errorList').show();
+        $('#errorDetails').html(`
+            <li class="text-danger">• 张三：缺少薪资配置</li>
+            <li class="text-danger">• 李四：基本工资设置错误</li>
+        `);
+    }
+}
+
+// 预览计算
+function previewCalculation() {
+    const salaryMonth = $('#salary_month').val();
+    if (!salaryMonth) {
+        alert('请先选择工资月份');
+        return;
+    }
+    
+    // 获取选中的员工ID
+    let employeeIds = [];
+    if ($('#calculate_selected').is(':checked')) {
+        employeeIds = $('.employee-checkbox:checked').map(function() {
+            return $(this).val();
+        }).get();
+        
+        if (employeeIds.length === 0) {
+            alert('请选择要计算的员工');
+            return;
+        }
+    }
+    
+    // 显示加载状态
+    $('#previewBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>预览中...');
+    
+    // 发送AJAX请求
+    $.ajax({
+        url: '/salary/api/preview/',
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val(),
+            'Content-Type': 'application/json'
+        },
+        data: JSON.stringify({
+            salary_month: salaryMonth,
+            employee_ids: employeeIds
+        }),
+        success: function(response) {
+            if (response.success) {
+                showPreviewResults(response.data);
+            } else {
+                alert('预览失败：' + response.error);
+            }
+        },
+        error: function(xhr) {
+            let errorMsg = '预览失败';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMsg += '：' + xhr.responseJSON.error;
+            }
+            alert(errorMsg);
+        },
+        complete: function() {
+            $('#previewBtn').prop('disabled', false).html('<i class="fas fa-eye me-1"></i>预览计算');
+        }
+    });
+}
+
+// 显示预览结果
+function showPreviewResults(data) {
+    const { preview_list, summary } = data;
+    
+    // 构建预览结果HTML
+    let previewHtml = `
+        <div class="modal fade" id="previewModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">工资计算预览</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- 汇总信息 -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h4 class="text-primary">${summary.total_employees}</h4>
+                                        <p class="mb-0 text-muted">总员工数</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h4 class="text-success">${summary.success_count}</h4>
+                                        <p class="mb-0 text-muted">可计算</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h4 class="text-warning">${summary.error_count}</h4>
+                                        <p class="mb-0 text-muted">有问题</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h4 class="text-info">¥${summary.total_net.toLocaleString()}</h4>
+                                        <p class="mb-0 text-muted">实发总额</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 详细列表 -->
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>员工姓名</th>
+                                        <th>部门</th>
+                                        <th>应发工资</th>
+                                        <th>实发工资</th>
+                                        <th>状态</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+    
+    preview_list.forEach(item => {
+        if (item.error) {
+            previewHtml += `
+                <tr class="table-warning">
+                    <td>${item.employee_name}</td>
+                    <td>${item.department}</td>
+                    <td colspan="2" class="text-danger">${item.error}</td>
+                    <td><span class="badge bg-danger">错误</span></td>
+                </tr>`;
+        } else {
+            const statusClass = item.status === '已计算' ? 'bg-success' : 'bg-primary';
+            previewHtml += `
+                <tr>
+                    <td>${item.employee_name}</td>
+                    <td>${item.department}</td>
+                    <td>¥${item.gross_salary.toLocaleString()}</td>
+                    <td>¥${item.net_salary.toLocaleString()}</td>
+                    <td><span class="badge ${statusClass}">${item.status}</span></td>
+                </tr>`;
+        }
+    });
+    
+    previewHtml += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                        <button type="button" class="btn btn-primary" onclick="confirmCalculation()">确认计算</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    
+    // 移除旧的模态框并添加新的
+    $('#previewModal').remove();
+    $('body').append(previewHtml);
+    
+    // 显示模态框
+    $('#previewModal').modal('show');
+}
+
+// 确认计算
+function confirmCalculation() {
+    $('#previewModal').modal('hide');
+    $('#calculateForm').submit();
+}
+
+// 员工筛选
+function filterEmployees() {
+    const searchText = $('#employeeSearch').val().toLowerCase();
+    const departmentId = $('#departmentFilter').val();
+    
+    $('.employee-item').each(function() {
+        const name = $(this).data('name').toLowerCase();
+        const id = $(this).data('id').toLowerCase();
+        const department = $(this).data('department').toString();
+        
+        let showItem = true;
+        
+        // 文本搜索
+        if (searchText && !name.includes(searchText) && !id.includes(searchText)) {
+            showItem = false;
+        }
+        
+        // 部门筛选
+        if (departmentId && department !== departmentId) {
+            showItem = false;
+        }
+        
+        $(this).toggle(showItem);
+    });
+}
+
+// 全选员工
+function selectAllEmployees() {
+    $('.employee-item:visible .employee-checkbox').prop('checked', true);
+}
+
+// 清空选择
+function clearAllEmployees() {
+    $('.employee-checkbox').prop('checked', false);
+}
+</script>
+{% endblock %}

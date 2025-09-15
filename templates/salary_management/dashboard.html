@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}工资管理 - 前钱人力资源管理系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="mb-0">工资管理</h2>
+            <p class="text-muted">管理员工薪资配置、计算月度工资、生成工资报表</p>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ total_employees }}</h4>
+                            <p class="mb-0">员工总数</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-users fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ active_configs }}</h4>
+                            <p class="mb-0">活跃薪资配置</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-cog fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ current_month_records }}</h4>
+                            <p class="mb-0">本月工资记录</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-calendar fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ current_month|date:"Y年m月" }}</h4>
+                            <p class="mb-0">当前月份</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-clock fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 快速操作 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">快速操作</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'salary_management:calculate' %}" class="btn btn-primary btn-lg w-100">
+                                <i class="fas fa-calculator me-2"></i>
+                                计算工资
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'salary_management:config_list' %}" class="btn btn-success btn-lg w-100">
+                                <i class="fas fa-cog me-2"></i>
+                                薪资配置
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'salary_management:monthly_list' %}" class="btn btn-info btn-lg w-100">
+                                <i class="fas fa-list me-2"></i>
+                                工资记录
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'salary_management:department_report' %}" class="btn btn-warning btn-lg w-100">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                部门报表
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'salary_management:workflow' %}" class="btn btn-outline-secondary btn-lg w-100">
+                                <i class="fas fa-sitemap me-2"></i>
+                                流程图
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 最近工资记录 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">最近工资记录</h5>
+                    <a href="{% url 'salary_management:monthly_list' %}" class="btn btn-sm btn-outline-primary">
+                        查看全部
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_salaries %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>员工姓名</th>
+                                        <th>工号</th>
+                                        <th>部门</th>
+                                        <th>工资月份</th>
+                                        <th>应发工资</th>
+                                        <th>实发工资</th>
+                                        <th>状态</th>
+                                        <th>创建时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for salary in recent_salaries %}
+                                    <tr>
+                                        <td>{{ salary.employee.name }}</td>
+                                        <td>{{ salary.employee.employeeId }}</td>
+                                        <td>{{ salary.employee.station.department.departmentName }}</td>
+                                        <td>{{ salary.salary_month|date:"Y年m月" }}</td>
+                                        <td>¥{{ salary.gross_salary|floatformat:2 }}</td>
+                                        <td>¥{{ salary.net_salary|floatformat:2 }}</td>
+                                        <td>
+                                            {% if salary.status == 'DRAFT' %}
+                                                <span class="badge bg-secondary">草稿</span>
+                                            {% elif salary.status == 'CONFIRMED' %}
+                                                <span class="badge bg-primary">已确认</span>
+                                            {% elif salary.status == 'PAID' %}
+                                                <span class="badge bg-success">已发放</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ salary.created_at|date:"m-d H:i" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">暂无工资记录</p>
+                            <a href="{% url 'salary_management:calculate' %}" class="btn btn-primary">
+                                开始计算工资
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 可以添加一些图表或动态数据加载
+    console.log('工资管理首页加载完成');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,549 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}岗位管理 - 人力资源管理系统{% endblock %}
+
+{% block page_title %}岗位管理{% endblock %}
+
+{% block page_description %}
+<p class="text-muted">管理公司岗位信息和职位设置</p>
+{% endblock %}
+
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">首页</a></li>
+        <li class="breadcrumb-item active" aria-current="page">岗位管理</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<!-- 操作工具栏 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStationModal">
+                        <i class="fas fa-plus"></i> 添加岗位
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" id="batchDeleteBtn" disabled>
+                        <i class="fas fa-trash"></i> 批量删除
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="location.reload()">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="search-box">
+                    <input type="text" class="form-control" id="searchInput" placeholder="搜索岗位名称...">
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 筛选条件 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">部门筛选</label>
+                <select class="form-select" id="departmentFilter">
+                    <option value="">全部部门</option>
+                    <!-- 部门选项将通过AJAX动态加载 -->
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="button" class="btn btn-outline-primary" onclick="applyFilters()">
+                    <i class="fas fa-filter"></i> 应用筛选
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="clearFilters()">
+                    <i class="fas fa-times"></i> 清除
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 岗位列表 -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-briefcase text-primary"></i> 岗位列表
+        </h5>
+        <span class="badge bg-secondary" id="stationCount">加载中...</span>
+    </div>
+    <div class="card-body p-0">
+        <div id="stationTableContainer">
+            <!-- 岗位表格将通过AJAX动态加载 -->
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">加载中...</span>
+                </div>
+                <p class="mt-2 text-muted">正在加载岗位数据...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 分页 -->
+<nav aria-label="岗位分页" class="mt-4">
+    <ul class="pagination justify-content-center" id="paginationContainer">
+        <!-- 分页将通过JavaScript动态生成 -->
+    </ul>
+</nav>
+
+<!-- 添加岗位模态框 -->
+<div class="modal fade" id="addStationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus text-primary"></i> 添加岗位
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addStationForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="addStationName" class="form-label">岗位名称 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="addStationName" name="stationName" required>
+                        <div class="invalid-feedback">请输入岗位名称</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addStationDescription" class="form-label">岗位描述</label>
+                        <textarea class="form-control" id="addStationDescription" name="description" rows="3" placeholder="请输入岗位描述（可选）"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addDepartmentId" class="form-label">所属部门 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="addDepartmentId" name="departmentId" required>
+                            <option value="">请选择部门</option>
+                            <!-- 部门选项将通过AJAX动态加载 -->
+                        </select>
+                        <div class="invalid-feedback">请选择所属部门</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑岗位模态框 -->
+<div class="modal fade" id="editStationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit text-warning"></i> 编辑岗位
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editStationForm">
+                <input type="hidden" id="editStationId" name="id">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editStationName" class="form-label">岗位名称 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="editStationName" name="stationName" required>
+                        <div class="invalid-feedback">请输入岗位名称</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editStationDescription" class="form-label">岗位描述</label>
+                        <textarea class="form-control" id="editStationDescription" name="description" rows="3" placeholder="请输入岗位描述（可选）"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editDepartmentId" class="form-label">所属部门 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="editDepartmentId" name="departmentId" required>
+                            <option value="">请选择部门</option>
+                            <!-- 部门选项将通过AJAX动态加载 -->
+                        </select>
+                        <div class="invalid-feedback">请选择所属部门</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save"></i> 更新
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 初始化工具提示
+    $('[data-bs-toggle="tooltip"]').tooltip();
+    
+    // 当前页码
+    let currentPage = 1;
+    let pageSize = 10;
+    
+    // 加载部门列表
+    loadDepartments();
+    
+    // 加载岗位列表
+    loadStations();
+    
+    // 搜索功能
+    $('#searchInput').on('input', function() {
+        const searchTerm = $(this).val().toLowerCase();
+        filterStations();
+    });
+    
+    // 全选功能
+    $(document).on('change', '#selectAll', function() {
+        $('.row-checkbox').prop('checked', $(this).prop('checked'));
+        updateBatchDeleteButton();
+    });
+    
+    // 单选功能
+    $(document).on('change', '.row-checkbox', function() {
+        updateBatchDeleteButton();
+        const totalCheckboxes = $('.row-checkbox').length;
+        const checkedCheckboxes = $('.row-checkbox:checked').length;
+        $('#selectAll').prop('checked', totalCheckboxes === checkedCheckboxes);
+    });
+    
+    // 更新批量删除按钮状态
+    function updateBatchDeleteButton() {
+        const checkedCount = $('.row-checkbox:checked').length;
+        $('#batchDeleteBtn').prop('disabled', checkedCount === 0);
+    }
+    
+    // 批量删除
+    $('#batchDeleteBtn').click(function() {
+        const selectedIds = $('.row-checkbox:checked').map(function() {
+            return $(this).val();
+        }).get();
+        
+        if (selectedIds.length === 0) return;
+        
+        if (confirm(`确定要删除选中的 ${selectedIds.length} 个岗位吗？\n\n注意：删除岗位可能会影响相关的员工数据。`)) {
+            // 这里可以实现批量删除的AJAX请求
+            showMessage('批量删除功能开发中...', 'info');
+        }
+    });
+    
+    // 添加岗位表单提交
+    $('#addStationForm').submit(function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            stationName: $('#addStationName').val().trim(),
+            description: $('#addStationDescription').val().trim(),
+            departmentId: $('#addDepartmentId').val()
+        };
+        
+        if (!formData.stationName) {
+            $('#addStationName').addClass('is-invalid');
+            return;
+        }
+        
+        if (!formData.departmentId) {
+            $('#addDepartmentId').addClass('is-invalid');
+            return;
+        }
+        
+        // AJAX请求添加岗位
+        $.ajax({
+            url: '/station/add/',
+            method: 'POST',
+            data: JSON.stringify(formData),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': $('meta[name=csrf-token]').attr('content')
+            },
+            success: function(response) {
+                if (response.code === 2000) {
+                    $('#addStationModal').modal('hide');
+                    showMessage('岗位添加成功！', 'success');
+                    loadStations(); // 重新加载岗位列表
+                } else {
+                    showMessage(response.msg || '添加失败', 'error');
+                }
+            },
+            error: function() {
+                showMessage('网络错误，请稍后重试', 'error');
+            }
+        });
+    });
+    
+    // 编辑岗位表单提交
+    $('#editStationForm').submit(function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            id: $('#editStationId').val(),
+            stationName: $('#editStationName').val().trim(),
+            description: $('#editStationDescription').val().trim(),
+            departmentId: $('#editDepartmentId').val()
+        };
+        
+        if (!formData.stationName) {
+            $('#editStationName').addClass('is-invalid');
+            return;
+        }
+        
+        if (!formData.departmentId) {
+            $('#editDepartmentId').addClass('is-invalid');
+            return;
+        }
+        
+        // AJAX请求更新岗位
+        $.ajax({
+            url: '/station/update/',
+            method: 'PUT',
+            data: JSON.stringify(formData),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': $('meta[name=csrf-token]').attr('content')
+            },
+            success: function(response) {
+                if (response.code === 2000) {
+                    $('#editStationModal').modal('hide');
+                    showMessage('岗位更新成功！', 'success');
+                    loadStations(); // 重新加载岗位列表
+                } else {
+                    showMessage(response.msg || '更新失败', 'error');
+                }
+            },
+            error: function() {
+                showMessage('网络错误，请稍后重试', 'error');
+            }
+        });
+    });
+    
+    // 清除表单验证状态
+    $('.modal').on('hidden.bs.modal', function() {
+        $(this).find('form')[0].reset();
+        $(this).find('.is-invalid').removeClass('is-invalid');
+    });
+    
+    // 加载部门列表
+    function loadDepartments() {
+        $.ajax({
+            url: '/department/getList/',
+            method: 'GET',
+            success: function(response) {
+                if (response.code === 2000 && response.data) {
+                    const departments = response.data || [];
+                    let options = '<option value="">请选择部门</option>';
+                    let filterOptions = '<option value="">全部部门</option>';
+                    
+                    departments.forEach(function(dept) {
+                        options += `<option value="${dept.id}">${dept.departmentName}</option>`;
+                        filterOptions += `<option value="${dept.id}">${dept.departmentName}</option>`;
+                    });
+                    
+                    $('#addDepartmentId, #editDepartmentId').html(options);
+                    $('#departmentFilter').html(filterOptions);
+                }
+            },
+            error: function() {
+                showMessage('加载部门列表失败', 'error');
+            }
+        });
+    }
+    
+    // 加载岗位列表
+    function loadStations(page = 1) {
+        currentPage = page;
+        
+        $.ajax({
+            url: '/station/getList/',
+            method: 'GET',
+            data: {
+                pageNum: page,
+                pageSize: pageSize
+            },
+            success: function(response) {
+                if (response.code === 2000 && response.data) {
+                    renderStationTable(response.data || []);
+                    renderPagination(response.total || 0, page, pageSize);
+                    $('#stationCount').text(`共 ${response.total || 0} 个岗位`);
+                } else {
+                    $('#stationTableContainer').html('<div class="empty-state"><i class="fas fa-briefcase"></i><h4>暂无岗位数据</h4><p>点击上方"添加岗位"按钮创建第一个岗位</p></div>');
+                    $('#stationCount').text('共 0 个岗位');
+                }
+            },
+            error: function() {
+                showMessage('加载岗位列表失败', 'error');
+                $('#stationTableContainer').html('<div class="text-center py-5"><i class="fas fa-exclamation-triangle text-warning"></i><p class="mt-2 text-muted">加载失败，请刷新重试</p></div>');
+            }
+        });
+    }
+    
+    // 渲染岗位表格
+    function renderStationTable(stations) {
+        if (stations.length === 0) {
+            $('#stationTableContainer').html('<div class="empty-state"><i class="fas fa-briefcase"></i><h4>暂无岗位数据</h4><p>点击上方"添加岗位"按钮创建第一个岗位</p></div>');
+            return;
+        }
+        
+        let tableHtml = `
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="50">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="selectAll">
+                                    <label class="form-check-label" for="selectAll"></label>
+                                </div>
+                            </th>
+                            <th>岗位编号</th>
+                            <th>岗位名称</th>
+                            <th>所属部门</th>
+                            <th>岗位描述</th>
+                            <th width="150">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        stations.forEach(function(station) {
+            tableHtml += `
+                <tr data-id="${station.id}">
+                    <td>
+                        <div class="form-check">
+                            <input class="form-check-input row-checkbox" type="checkbox" value="${station.id}">
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark">${station.id}</span>
+                    </td>
+                    <td>
+                        <strong>${station.stationName}</strong>
+                    </td>
+                    <td>
+                        <span class="text-primary">${station.departmentName || '未分配'}</span>
+                    </td>
+                    <td>
+                        <span class="text-muted">${station.description || '暂无描述'}</span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button type="button" class="btn btn-sm btn-outline-primary" 
+                                    onclick="editStation(${station.id}, '${station.stationName}', '${station.description || ''}', ${station.departmentId})"
+                                    data-bs-toggle="tooltip" title="编辑">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    onclick="deleteStation(${station.id}, '${station.stationName}')"
+                                    data-bs-toggle="tooltip" title="删除">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        tableHtml += '</tbody></table></div>';
+        $('#stationTableContainer').html(tableHtml);
+        
+        // 重新初始化工具提示
+        $('[data-bs-toggle="tooltip"]').tooltip();
+    }
+    
+    // 渲染分页
+    function renderPagination(total, currentPage, pageSize) {
+        const totalPages = Math.ceil(total / pageSize);
+        
+        if (totalPages <= 1) {
+            $('#paginationContainer').empty();
+            return;
+        }
+        
+        let paginationHtml = '';
+        
+        // 上一页
+        if (currentPage > 1) {
+            paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadStations(${currentPage - 1})">上一页</a></li>`;
+        }
+        
+        // 页码
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === currentPage) {
+                paginationHtml += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+            } else {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadStations(${i})">${i}</a></li>`;
+            }
+        }
+        
+        // 下一页
+        if (currentPage < totalPages) {
+            paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="loadStations(${currentPage + 1})">下一页</a></li>`;
+        }
+        
+        $('#paginationContainer').html(paginationHtml);
+    }
+    
+    // 筛选功能
+    function filterStations() {
+        // 这里可以实现基于部门的筛选功能
+        loadStations(1);
+    }
+});
+
+// 编辑岗位
+function editStation(id, stationName, description, departmentId) {
+    $('#editStationId').val(id);
+    $('#editStationName').val(stationName);
+    $('#editStationDescription').val(description);
+    $('#editDepartmentId').val(departmentId);
+    $('#editStationModal').modal('show');
+}
+
+// 删除岗位
+function deleteStation(id, stationName) {
+    if (confirm(`确定要删除岗位"${stationName}"吗？\n\n注意：删除岗位可能会影响相关的员工数据。`)) {
+        $.ajax({
+            url: '/station/delete/',
+            method: 'DELETE',
+            data: JSON.stringify({ id: id }),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': $('meta[name=csrf-token]').attr('content')
+            },
+            success: function(response) {
+                if (response.code === 2000) {
+                    showMessage('岗位删除成功！', 'success');
+                    loadStations(currentPage); // 重新加载当前页
+                } else {
+                    showMessage(response.msg || '删除失败', 'error');
+                }
+            },
+            error: function() {
+                showMessage('网络错误，请稍后重试', 'error');
+            }
+        });
+    }
+}
+
+// 应用筛选
+function applyFilters() {
+    loadStations(1);
+}
+
+// 清除筛选
+function clearFilters() {
+    $('#departmentFilter').val('');
+    $('#searchInput').val('');
+    loadStations(1);
+}
+</script>
+{% endblock %}

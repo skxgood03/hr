@@ -1,0 +1,393 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}部门管理 - 人力资源管理系统{% endblock %}
+
+{% block page_title %}部门管理{% endblock %}
+
+{% block page_description %}
+<p class="text-muted">管理公司组织架构和部门信息</p>
+{% endblock %}
+
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">首页</a></li>
+        <li class="breadcrumb-item active" aria-current="page">部门管理</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<!-- 操作工具栏 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDepartmentModal">
+                        <i class="fas fa-plus"></i> 添加部门
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" id="batchDeleteBtn" disabled>
+                        <i class="fas fa-trash"></i> 批量删除
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="location.reload()">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="search-box">
+                    <input type="text" class="form-control" id="searchInput" placeholder="搜索部门名称...">
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 部门列表 -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-sitemap text-primary"></i> 部门列表
+        </h5>
+        <span class="badge bg-secondary">共 {{ departments.count }} 个部门</span>
+    </div>
+    <div class="card-body p-0">
+        {% if departments %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th width="50">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="selectAll">
+                                <label class="form-check-label" for="selectAll"></label>
+                            </div>
+                        </th>
+                        <th>部门编号</th>
+                        <th>部门名称</th>
+                        <th>部门描述</th>
+                        <th>员工人数</th>
+                        <th>创建时间</th>
+                        <th>更新时间</th>
+                        <th width="150">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for department in departments %}
+                    <tr data-id="{{ department.id }}">
+                        <td>
+                            <div class="form-check">
+                                <input class="form-check-input row-checkbox" type="checkbox" value="{{ department.id }}">
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">{{ department.id }}</span>
+                        </td>
+                        <td>
+                            <a href="/department/{{ department.id }}/employees/" class="text-decoration-none">
+                                <strong class="text-primary">{{ department.departmentName }}</strong>
+                            </a>
+                        </td>
+                        <td>
+                            <span class="text-muted">{{ department.description|default:"暂无描述" }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-info text-white">{{ department.employee_count }} 人</span>
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ department.create_time|date:"Y-m-d H:i" }}</small>
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ department.update_time|date:"Y-m-d H:i" }}</small>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                        onclick="editDepartment({{ department.id }}, '{{ department.departmentName }}', '{{ department.description|default:"" }}')"
+                        data-bs-toggle="tooltip" title="编辑">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                        onclick="deleteDepartment({{ department.id }}, '{{ department.departmentName }}')"
+                        data-bs-toggle="tooltip" title="删除">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-sitemap"></i>
+            <h4>暂无部门数据</h4>
+            <p>点击上方"添加部门"按钮创建第一个部门</p>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDepartmentModal">
+                <i class="fas fa-plus"></i> 添加部门
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 添加部门模态框 -->
+<div class="modal fade" id="addDepartmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus text-primary"></i> 添加部门
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addDepartmentForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="addDepartmentName" class="form-label">部门名称 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="addDepartmentName" name="name" required>
+                        <div class="invalid-feedback">请输入部门名称</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addDepartmentDescription" class="form-label">部门描述</label>
+                        <textarea class="form-control" id="addDepartmentDescription" name="description" rows="3" placeholder="请输入部门描述（可选）"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑部门模态框 -->
+<div class="modal fade" id="editDepartmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit text-warning"></i> 编辑部门
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editDepartmentForm">
+                <input type="hidden" id="editDepartmentId" name="id">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editDepartmentName" class="form-label">部门名称 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="editDepartmentName" name="name" required>
+                        <div class="invalid-feedback">请输入部门名称</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editDepartmentDescription" class="form-label">部门描述</label>
+                        <textarea class="form-control" id="editDepartmentDescription" name="description" rows="3" placeholder="请输入部门描述（可选）"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save"></i> 更新
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 初始化工具提示
+    $('[data-bs-toggle="tooltip"]').tooltip();
+    
+    // 搜索功能
+    $('#searchInput').on('input', function() {
+        const searchTerm = $(this).val().toLowerCase();
+        $('tbody tr').each(function() {
+            const departmentName = $(this).find('td:nth-child(3)').text().toLowerCase();
+            const departmentDesc = $(this).find('td:nth-child(4)').text().toLowerCase();
+            const isVisible = departmentName.includes(searchTerm) || departmentDesc.includes(searchTerm);
+            $(this).toggle(isVisible);
+        });
+    });
+    
+    // 全选功能
+    $('#selectAll').change(function() {
+        $('.row-checkbox').prop('checked', $(this).prop('checked'));
+        updateBatchDeleteButton();
+    });
+    
+    // 单选功能
+    $(document).on('change', '.row-checkbox', function() {
+        updateBatchDeleteButton();
+        const totalCheckboxes = $('.row-checkbox').length;
+        const checkedCheckboxes = $('.row-checkbox:checked').length;
+        $('#selectAll').prop('checked', totalCheckboxes === checkedCheckboxes);
+    });
+    
+    // 更新批量删除按钮状态
+    function updateBatchDeleteButton() {
+        const checkedCount = $('.row-checkbox:checked').length;
+        $('#batchDeleteBtn').prop('disabled', checkedCount === 0);
+    }
+    
+    // 批量删除
+    $('#batchDeleteBtn').click(function() {
+        const selectedIds = $('.row-checkbox:checked').map(function() {
+            return $(this).val();
+        }).get();
+        
+        if (selectedIds.length === 0) return;
+        
+        if (confirm(`确定要删除选中的 ${selectedIds.length} 个部门吗？\n\n注意：删除部门可能会影响相关的员工和岗位数据。`)) {
+            $.ajax({
+                url: '/department/batch-delete/',
+                method: 'POST',
+                data: JSON.stringify({ ids: selectedIds }),
+                contentType: 'application/json',
+                headers: {
+                    'X-CSRFToken': $('meta[name=csrf-token]').attr('content')
+                },
+                success: function(response) {
+                    if (response.code === 2000) {
+                        showMessage(response.msg || '批量删除成功！', 'success');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showMessage(response.msg || '批量删除失败', 'error');
+                    }
+                },
+                error: function() {
+                    showMessage('网络错误，请稍后重试', 'error');
+                }
+            });
+        }
+    });
+    
+    // 添加部门表单提交
+    $('#addDepartmentForm').submit(function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            name: $('#addDepartmentName').val().trim(),
+            description: $('#addDepartmentDescription').val().trim()
+        };
+        
+        if (!formData.name) {
+            $('#addDepartmentName').addClass('is-invalid');
+            return;
+        }
+        
+        // AJAX请求添加部门
+        $.ajax({
+            url: '/department/add/',
+            method: 'POST',
+            data: JSON.stringify(formData),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': $('meta[name=csrf-token]').attr('content')
+            },
+            success: function(response) {
+                if (response.code === 2000) {
+                    $('#addDepartmentModal').modal('hide');
+                    showMessage('部门添加成功！', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showMessage(response.msg || '添加失败', 'error');
+                }
+            },
+            error: function() {
+                showMessage('网络错误，请稍后重试', 'error');
+            }
+        });
+    });
+    
+    // 编辑部门表单提交
+    $('#editDepartmentForm').submit(function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            id: $('#editDepartmentId').val(),
+            name: $('#editDepartmentName').val().trim(),
+            description: $('#editDepartmentDescription').val().trim()
+        };
+        
+        if (!formData.name) {
+            $('#editDepartmentName').addClass('is-invalid');
+            return;
+        }
+        
+        // AJAX请求更新部门
+        $.ajax({
+            url: '/department/update/',
+            method: 'POST',
+            data: JSON.stringify(formData),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': $('meta[name=csrf-token]').attr('content')
+            },
+            success: function(response) {
+                if (response.code === 2000) {
+                    $('#editDepartmentModal').modal('hide');
+                    showMessage('部门更新成功！', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showMessage(response.msg || '更新失败', 'error');
+                }
+            },
+            error: function() {
+                showMessage('网络错误，请稍后重试', 'error');
+            }
+        });
+    });
+    
+    // 清除表单验证状态
+    $('.modal').on('hidden.bs.modal', function() {
+        $(this).find('form')[0].reset();
+        $(this).find('.is-invalid').removeClass('is-invalid');
+    });
+});
+
+// 编辑部门
+function editDepartment(id, name, description) {
+    $('#editDepartmentId').val(id);
+    $('#editDepartmentName').val(name);
+    $('#editDepartmentDescription').val(description);
+    $('#editDepartmentModal').modal('show');
+}
+
+// 删除部门
+function deleteDepartment(id, name) {
+    if (confirm(`确定要删除部门"${name}"吗？\n\n注意：删除部门可能会影响相关的员工和岗位数据。`)) {
+        $.ajax({
+            url: '/department/delete/',
+            method: 'POST',
+            data: JSON.stringify({ id: id }),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': $('meta[name=csrf-token]').attr('content')
+            },
+            success: function(response) {
+                if (response.code === 2000) {
+                    showMessage('部门删除成功！', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showMessage(response.msg || '删除失败', 'error');
+                }
+            },
+            error: function() {
+                showMessage('网络错误，请稍后重试', 'error');
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

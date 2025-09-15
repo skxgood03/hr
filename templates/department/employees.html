@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ department.departmentName }}部门员工 - 人力资源管理系统{% endblock %}
+
+{% block page_title %}{{ department.departmentName }}部门员工{% endblock %}
+
+{% block page_description %}
+<p class="text-muted">查看{{ department.departmentName }}部门的所有员工信息</p>
+{% endblock %}
+
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">首页</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'department_list' %}">部门管理</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ department.departmentName }}部门员工</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+{% if error %}
+<div class="alert alert-danger" role="alert">
+    <i class="fas fa-exclamation-triangle"></i> {{ error }}
+</div>
+{% else %}
+<!-- 部门信息卡片 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h4 class="mb-1">
+                    <i class="fas fa-building text-primary"></i> {{ department.departmentName }}
+                </h4>
+                <p class="text-muted mb-0">{{ department.description|default:"暂无描述" }}</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="d-flex justify-content-end gap-3">
+                    <div class="text-center">
+                        <div class="h3 text-primary mb-0">{{ employee_count }}</div>
+                        <small class="text-muted">员工总数</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 员工列表 -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-users text-primary"></i> 员工列表
+        </h5>
+        <span class="badge bg-secondary">共 {{ employee_count }} 名员工</span>
+    </div>
+    <div class="card-body p-0">
+        {% if employees %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>员工编号</th>
+                        <th>员工姓名</th>
+                        <th>性别</th>
+                        <th>年龄</th>
+                        <th>岗位</th>
+                        <th>电话</th>
+                        <th>邮箱</th>
+                        <th>入职日期</th>
+                        <th>工作状态</th>
+                        <th width="100">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in employees %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-light text-dark">{{ employee.id }}</span>
+                        </td>
+                        <td>
+                            <a href="/department/employee/{{ employee.id }}/" class="text-decoration-none">
+                                <strong class="text-primary">{{ employee.name }}</strong>
+                            </a>
+                        </td>
+                        <td>
+                            {% if employee.gender == 1 %}
+                                <span class="badge bg-info">男</span>
+                            {% else %}
+                                <span class="badge bg-warning">女</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ employee.age }}岁</td>
+                        <td>
+                            <span class="badge bg-secondary">{{ employee.station.stationName }}</span>
+                        </td>
+                        <td>
+                            <a href="tel:{{ employee.phone }}" class="text-decoration-none">
+                                <i class="fas fa-phone text-success"></i> {{ employee.phone }}
+                            </a>
+                        </td>
+                        <td>
+                            <a href="mailto:{{ employee.email }}" class="text-decoration-none">
+                                <i class="fas fa-envelope text-primary"></i> {{ employee.email }}
+                            </a>
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ employee.beginDate }}</small>
+                        </td>
+                        <td>
+                            {% if employee.workStatus == 1 %}
+                                <span class="badge bg-success">在职</span>
+                            {% else %}
+                                <span class="badge bg-danger">离职</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="/department/employee/{{ employee.id }}/" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="查看详情">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-users"></i>
+            <h4>该部门暂无员工</h4>
+            <p>{{ department.departmentName }}部门目前还没有员工</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 初始化工具提示
+    $('[data-bs-toggle="tooltip"]').tooltip();
+});
+</script>
+{% endblock %}

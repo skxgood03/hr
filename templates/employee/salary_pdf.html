@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ employee.name }} - {{ salary.salary_month|date:"Y年m月" }}工资单</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #fff;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .salary-slip {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border: 2px solid #333;
+            padding: 30px;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .document-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .period {
+            font-size: 16px;
+            color: #666;
+        }
+        
+        .employee-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            font-size: 16px;
+            color: #333;
+        }
+        
+        .salary-details {
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .salary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .salary-table th,
+        .salary-table td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        
+        .salary-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .salary-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .amount {
+            text-align: right;
+            font-weight: bold;
+        }
+        
+        .positive {
+            color: #28a745;
+        }
+        
+        .negative {
+            color: #dc3545;
+        }
+        
+        .total-row {
+            background-color: #e9ecef !important;
+            font-weight: bold;
+        }
+        
+        .net-salary {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .net-salary-amount {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .net-salary-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-info {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .status-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .status-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 2px;
+        }
+        
+        .status-value {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .generated-info {
+            text-align: right;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .remarks {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+        }
+        
+        .remarks-title {
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 5px;
+        }
+        
+        .remarks-content {
+            color: #856404;
+        }
+        
+        @media print {
+            body {
+                margin: 0;
+                padding: 10px;
+            }
+            
+            .salary-slip {
+                border: none;
+                box-shadow: none;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="salary-slip">
+        <!-- 头部信息 -->
+        <div class="header">
+            <div class="company-name">人力资源管理系统</div>
+            <div class="document-title">工资发放单</div>
+            <div class="period">{{ salary.salary_month|date:"Y年m月" }}</div>
+        </div>
+        
+        <!-- 员工信息 -->
+        <div class="employee-info">
+            <div class="info-item">
+                <span class="info-label">员工姓名</span>
+                <span class="info-value">{{ employee.name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">员工编号</span>
+                <span class="info-value">{{ employee.id }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">部门</span>
+                <span class="info-value">{{ employee.station.department.departmentName|default:"未分配" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">岗位</span>
+                <span class="info-value">{{ employee.station.name|default:"未分配" }}</span>
+            </div>
+        </div>
+        
+        <!-- 工资详情 -->
+        <div class="salary-details">
+            <!-- 收入项目 -->
+            <div class="section-title">收入项目</div>
+            <table class="salary-table">
+                <thead>
+                    <tr>
+                        <th>项目</th>
+                        <th class="amount">金额（元）</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>基本工资</td>
+                        <td class="amount positive">{{ salary.basic_salary|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td>绩效工资</td>
+                        <td class="amount positive">{{ salary.performance_salary|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td>津贴补贴</td>
+                        <td class="amount positive">{{ salary.allowance|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td>奖金</td>
+                        <td class="amount positive">{{ salary.bonus|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td>加班费</td>
+                        <td class="amount positive">{{ salary.overtime_pay|floatformat:2 }}</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td><strong>应发工资合计</strong></td>
+                        <td class="amount positive"><strong>{{ salary.gross_salary|floatformat:2 }}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <!-- 扣除项目 -->
+            <div class="section-title">扣除项目</div>
+            <table class="salary-table">
+                <thead>
+                    <tr>
+                        <th>项目</th>
+                        <th class="amount">金额（元）</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>社会保险</td>
+                        <td class="amount negative">{{ salary.social_insurance|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td>住房公积金</td>
+                        <td class="amount negative">{{ salary.housing_fund|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td>个人所得税</td>
+                        <td class="amount negative">{{ salary.income_tax|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td>其他扣款</td>
+                        <td class="amount negative">{{ salary.other_deduction|floatformat:2 }}</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td><strong>扣款合计</strong></td>
+                        <td class="amount negative"><strong>{{ salary.total_deduction|floatformat:2 }}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 实发工资 -->
+        <div class="net-salary">
+            <div class="net-salary-amount">¥{{ salary.net_salary|floatformat:2 }}</div>
+            <div class="net-salary-label">实发工资</div>
+        </div>
+        
+        <!-- 银行账号信息 -->
+        {% if salary.bank_account %}
+        <div style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+            <strong>银行账号：</strong>{{ salary.bank_account }}
+        </div>
+        {% endif %}
+        
+        <!-- 备注信息 -->
+        {% if salary.remarks %}
+        <div class="remarks">
+            <div class="remarks-title">备注</div>
+            <div class="remarks-content">{{ salary.remarks }}</div>
+        </div>
+        {% endif %}
+        
+        <!-- 页脚信息 -->
+        <div class="footer">
+            <div class="status-info">
+                <div class="status-item">
+                    <span class="status-label">发放状态</span>
+                    <span class="status-value">{{ salary.get_status_display }}</span>
+                </div>
+                {% if salary.pay_date %}
+                <div class="status-item">
+                    <span class="status-label">发放日期</span>
+                    <span class="status-value">{{ salary.pay_date|date:"Y-m-d" }}</span>
+                </div>
+                {% endif %}
+            </div>
+            <div class="generated-info">
+                <div>生成时间：{{ generated_date }}</div>
+                <div>系统生成，无需签章</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 自动打印功能（可选）
+        // window.onload = function() {
+        //     window.print();
+        // }
+    </script>
+</body>
+</html>

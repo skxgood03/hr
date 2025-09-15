@@ -1,0 +1,945 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}员工薪资配置 - 前钱人力资源管理系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 页面标题和操作按钮 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2 class="mb-0">员工薪资配置</h2>
+            <p class="text-muted">管理员工的薪资配置信息</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <a href="{% url 'salary_management:dashboard' %}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-arrow-left me-1"></i>返回首页
+            </a>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addConfigModal">
+                <i class="fas fa-plus me-1"></i>新增配置
+            </button>
+        </div>
+    </div>
+
+    <!-- 搜索和筛选 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="search" class="form-label">搜索员工</label>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   value="{{ search }}" placeholder="输入姓名或工号">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="department" class="form-label">部门</label>
+                            <select class="form-select" id="department" name="department">
+                                <option value="">全部部门</option>
+                                {% for dept in departments %}
+                                <option value="{{ dept.id }}" {% if dept.id|stringformat:"s" == selected_department %}selected{% endif %}>
+                                    {{ dept.departmentName }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search me-1"></i>搜索
+                            </button>
+                            <a href="{% url 'salary_management:config_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-refresh me-1"></i>重置
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 费率信息展示 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>薪资计算费率信息</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- 社保费率 -->
+                        <div class="col-md-4">
+                            <div class="card border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="fas fa-shield-alt me-1"></i>社保费率</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row text-center">
+                                        <div class="col-4">
+                                            <div class="border-end">
+                                                <div class="text-primary fw-bold">8%</div>
+                                                <small class="text-muted">养老保险</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="border-end">
+                                                <div class="text-primary fw-bold">2%</div>
+                                                <small class="text-muted">医疗保险</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="text-primary fw-bold">0.5%</div>
+                                            <small class="text-muted">失业保险</small>
+                                        </div>
+                                    </div>
+                                    <hr class="my-2">
+                                    <div class="text-center">
+                                        <span class="badge bg-primary">总费率: 10.5%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 公积金费率 -->
+                        <div class="col-md-4">
+                            <div class="card border-success">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0"><i class="fas fa-home me-1"></i>住房公积金</h6>
+                                </div>
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <div class="display-6 text-success fw-bold">12%</div>
+                                        <small class="text-muted">缴纳比例</small>
+                                    </div>
+                                    <div class="text-muted small">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        基于基本工资计算
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 个人所得税税率表 -->
+                        <div class="col-md-4">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0"><i class="fas fa-percentage me-1"></i>个人所得税税率表</h6>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-borderless mb-0">
+                                            <thead>
+                                                <tr class="text-center">
+                                                    <th class="small">级数</th>
+                                                    <th class="small">应纳税所得额</th>
+                                                    <th class="small">税率</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="small">
+                                                <tr class="text-center">
+                                                    <td>1</td>
+                                                    <td>≤3000</td>
+                                                    <td class="text-success fw-bold">3%</td>
+                                                </tr>
+                                                <tr class="text-center">
+                                                    <td>2</td>
+                                                    <td>3000-12000</td>
+                                                    <td class="text-info fw-bold">10%</td>
+                                                </tr>
+                                                <tr class="text-center">
+                                                    <td>3</td>
+                                                    <td>12000-25000</td>
+                                                    <td class="text-warning fw-bold">20%</td>
+                                                </tr>
+                                                <tr class="text-center">
+                                                    <td>4</td>
+                                                    <td>25000-35000</td>
+                                                    <td class="text-danger fw-bold">25%</td>
+                                                </tr>
+                                                <tr class="text-center">
+                                                    <td>5</td>
+                                                    <td>>35000</td>
+                                                    <td class="text-dark fw-bold">30%</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="text-center mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            月度累进税率
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 配置列表 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">薪资配置列表</h5>
+                </div>
+                <div class="card-body">
+                    {% if page_obj %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>员工姓名</th>
+                                        <th>部门</th>
+                                        <th>岗位</th>
+                                        <th>薪资等级</th>
+                                        <th>基本工资</th>
+                                        <th>绩效奖金</th>
+                                        <th>津贴补助</th>
+                                        <th>公积金比例</th>
+                                        <th>生效日期</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for config in page_obj %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                                    {{ config.employee.name|first }}
+                                                </div>
+                                                <div>
+                                                    <div class="fw-bold">{{ config.employee.name }}</div>
+                                                    <small class="text-muted">{{ config.employee.gender }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{{ config.employee.station.department.departmentName }}</td>
+                                        <td>{{ config.employee.station.stationName }}</td>
+                                        <td>
+                                            <span class="badge bg-info">{{ config.salary_grade.grade_name }}</span>
+                                        </td>
+                                        <td>¥{{ config.basic_salary|floatformat:2 }}</td>
+                                        <td>¥{{ config.performance_salary|floatformat:2 }}</td>
+                                        <td>¥{{ config.allowance|floatformat:2 }}</td>
+                                        <td>
+                                            <span class="badge bg-success">{{ config.housing_fund_rate|floatformat:2 }}%</span>
+                                        </td>
+                                        <td>{{ config.effective_date|date:"Y-m-d" }}</td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button class="btn btn-sm btn-outline-primary" 
+                                                        onclick="editConfig({{ config.id }})">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-success" 
+                                                        onclick="adjustHousingFundRate({{ config.employee.id }}, '{{ config.employee.name }}', {{ config.housing_fund_rate }})"
+                                                        title="调整公积金比例">
+                                                    <i class="fas fa-home"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-info" 
+                                                        onclick="viewHistory({{ config.employee.id }})">
+                                                    <i class="fas fa-history"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" 
+                                                        onclick="deactivateConfig({{ config.id }})">
+                                                    <i class="fas fa-ban"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 分页 -->
+                        {% if page_obj.has_other_pages %}
+                        <nav aria-label="分页导航">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if selected_department %}&department={{ selected_department }}{% endif %}">
+                                            首页
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_department %}&department={{ selected_department }}{% endif %}">
+                                            上一页
+                                        </a>
+                                    </li>
+                                {% endif %}
+
+                                <li class="page-item active">
+                                    <span class="page-link">
+                                        第 {{ page_obj.number }} 页，共 {{ page_obj.paginator.num_pages }} 页
+                                    </span>
+                                </li>
+
+                                {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_department %}&department={{ selected_department }}{% endif %}">
+                                            下一页
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if selected_department %}&department={{ selected_department }}{% endif %}">
+                                            末页
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">暂无薪资配置数据</p>
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addConfigModal">
+                                <i class="fas fa-plus me-1"></i>新增配置
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 新增配置模态框 -->
+<div class="modal fade" id="addConfigModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">新增薪资配置</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addConfigForm">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="employee" class="form-label">选择员工 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="employee" name="employee" required>
+                                <option value="">请选择员工</option>
+                                <!-- 通过AJAX加载员工列表 -->
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="salary_grade" class="form-label">薪资等级 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="salary_grade" name="salary_grade" required>
+                                <option value="">请选择薪资等级</option>
+                                <!-- 通过AJAX加载薪资等级 -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="base_salary" class="form-label">基本工资 <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="base_salary" name="base_salary" 
+                                   step="0.01" min="0" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="performance_bonus" class="form-label">绩效奖金</label>
+                            <input type="number" class="form-control" id="performance_bonus" name="performance_bonus" 
+                                   step="0.01" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="allowances" class="form-label">津贴补助</label>
+                            <input type="number" class="form-control" id="allowances" name="allowances" 
+                                   step="0.01" min="0" value="0">
+                        </div>
+
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="effective_date" class="form-label">生效日期 <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="effective_date" name="effective_date" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">备注</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveConfig()">保存配置</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑配置模态框 -->
+<div class="modal fade" id="editConfigModal" tabindex="-1" aria-labelledby="editConfigModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editConfigModalLabel">
+                    <i class="fas fa-edit me-2"></i>编辑薪资配置
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editConfigForm">
+                    {% csrf_token %}
+                    <input type="hidden" id="edit_config_id" name="config_id">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_employee" class="form-label">员工 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="edit_employee_name" readonly>
+                                <input type="hidden" id="edit_employee" name="employee">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_salary_grade" class="form-label">薪资等级 <span class="text-danger">*</span></label>
+                                <select class="form-select" id="edit_salary_grade" name="salary_grade" required>
+                                    <option value="">请选择薪资等级</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_base_salary" class="form-label">基本工资 <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="edit_base_salary" name="base_salary" step="0.01" min="0" required>
+                                <div class="form-text" id="edit_salary_suggestion"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_performance_bonus" class="form-label">绩效奖金</label>
+                                <input type="number" class="form-control" id="edit_performance_bonus" name="performance_bonus" step="0.01" min="0" value="0">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_allowances" class="form-label">津贴补助</label>
+                                <input type="number" class="form-control" id="edit_allowances" name="allowances" step="0.01" min="0" value="0">
+                            </div>
+                        </div>
+
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit_effective_date" class="form-label">生效日期 <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="edit_effective_date" name="effective_date" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit_notes" class="form-label">备注</label>
+                        <textarea class="form-control" id="edit_notes" name="notes" rows="3" placeholder="请输入备注信息"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="updateConfig()">保存修改</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 查看历史模态框 -->
+<div class="modal fade" id="historyModal" tabindex="-1" aria-labelledby="historyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="historyModalLabel">
+                    <i class="fas fa-history me-2"></i>薪资调整历史
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="historyContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                        <p class="mt-2">正在加载历史记录...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 页面加载完成后初始化
+$(document).ready(function() {
+    // 设置默认生效日期为今天
+    $('#effective_date').val(new Date().toISOString().split('T')[0]);
+    
+    // 加载员工和薪资等级选项
+    loadEmployeeOptions();
+    loadSalaryGradeOptions();
+    
+    // 薪资等级选择变化时，自动设置基本工资建议值
+    $('#salary_grade').on('change', function() {
+        const selectedOption = $(this).find('option:selected');
+        const minSalary = selectedOption.data('min');
+        const maxSalary = selectedOption.data('max');
+        
+        if (minSalary && maxSalary) {
+            // 设置为薪资等级的中位数作为建议值
+            const suggestedSalary = (minSalary + maxSalary) / 2;
+            $('#base_salary').val(suggestedSalary.toFixed(2));
+            
+            // 显示薪资范围提示
+            const rangeText = `建议范围: ${minSalary} - ${maxSalary} 元`;
+            let rangeHint = $('#salary_range_hint');
+            if (rangeHint.length === 0) {
+                $('#base_salary').after('<small id="salary_range_hint" class="form-text text-muted"></small>');
+                rangeHint = $('#salary_range_hint');
+            }
+            rangeHint.text(rangeText);
+        } else {
+            $('#salary_range_hint').remove();
+        }
+    });
+    
+    // 编辑模态框的薪资等级选择变化事件
+    $('#edit_salary_grade').on('change', function() {
+        const selectedOption = $(this).find('option:selected');
+        const minSalary = selectedOption.data('min');
+        const maxSalary = selectedOption.data('max');
+        
+        if (minSalary && maxSalary) {
+            $('#edit_salary_suggestion').text(`薪资范围: ${minSalary} - ${maxSalary} 元`);
+        } else {
+            $('#edit_salary_suggestion').text('');
+        }
+    });
+});
+
+// 加载员工选项
+function loadEmployeeOptions() {
+    $.ajax({
+        url: '{% url "salary_management:api_employees" %}',
+        type: 'GET',
+        success: function(response) {
+            if (response.success) {
+                const employeeSelect = $('#employee');
+                employeeSelect.empty().append('<option value="">请选择员工</option>');
+                
+                response.data.forEach(function(employee) {
+                    const optionText = `${employee.name} (${employee.employee_id}) - ${employee.department}/${employee.station}`;
+                    employeeSelect.append(`<option value="${employee.id}">${optionText}</option>`);
+                });
+                
+                if (response.data.length === 0) {
+                    employeeSelect.append('<option value="" disabled>暂无可配置的员工</option>');
+                }
+            } else {
+                console.error('加载员工列表失败:', response.error);
+                alert('加载员工列表失败: ' + response.error);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('请求员工列表失败:', error);
+            alert('请求员工列表失败，请稍后重试');
+        }
+    });
+}
+
+// 加载薪资等级选项
+function loadSalaryGradeOptions() {
+    $.ajax({
+        url: '{% url "salary_management:api_salary_grades" %}',
+        type: 'GET',
+        success: function(response) {
+            if (response.success) {
+                const gradeSelect = $('#salary_grade');
+                gradeSelect.empty().append('<option value="">请选择薪资等级</option>');
+                
+                response.data.forEach(function(grade) {
+                    const optionText = `${grade.grade_name} (${grade.min_salary}-${grade.max_salary}元)`;
+                    gradeSelect.append(`<option value="${grade.id}" data-min="${grade.min_salary}" data-max="${grade.max_salary}">${optionText}</option>`);
+                });
+                
+                if (response.data.length === 0) {
+                    gradeSelect.append('<option value="" disabled>暂无薪资等级</option>');
+                }
+            } else {
+                console.error('加载薪资等级失败:', response.error);
+                alert('加载薪资等级失败: ' + response.error);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('请求薪资等级失败:', error);
+            alert('请求薪资等级失败，请稍后重试');
+        }
+    });
+}
+
+// 保存配置
+function saveConfig() {
+    const form = document.getElementById('addConfigForm');
+    
+    // 表单验证
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    // 获取表单数据
+    const formData = {
+        employee: $('#employee').val(),
+        salary_grade: $('#salary_grade').val(),
+        base_salary: $('#base_salary').val(),
+        performance_bonus: $('#performance_bonus').val() || '0',
+        allowances: $('#allowances').val() || '0',
+        
+        effective_date: $('#effective_date').val(),
+        notes: $('#notes').val()
+    };
+    
+    // 显示加载状态
+    const saveBtn = $('.modal-footer .btn-primary');
+    const originalText = saveBtn.text();
+    saveBtn.prop('disabled', true).text('保存中...');
+    
+    // 发送AJAX请求
+    $.ajax({
+        url: '{% url "salary_management:api_create_config" %}',
+        type: 'POST',
+        data: JSON.stringify(formData),
+        contentType: 'application/json',
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                alert('薪资配置保存成功！');
+                $('#addConfigModal').modal('hide');
+                location.reload();
+            } else {
+                alert('保存失败: ' + response.error);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('保存配置失败:', error);
+            alert('保存配置失败，请稍后重试');
+        },
+        complete: function() {
+            // 恢复按钮状态
+            saveBtn.prop('disabled', false).text(originalText);
+        }
+    });
+}
+
+// 编辑配置
+function editConfig(configId) {
+    // 加载配置数据
+    $.ajax({
+        url: `{% url 'salary_management:api_get_config' 0 %}`.replace('0', configId),
+        type: 'GET',
+        success: function(response) {
+            if (response.success) {
+                const config = response.data;
+                
+                // 填充表单数据
+                $('#edit_config_id').val(config.id);
+                $('#edit_employee').val(config.employee_id);
+                $('#edit_employee_name').val(config.employee_name);
+                $('#edit_base_salary').val(config.basic_salary);
+                $('#edit_performance_bonus').val(config.performance_salary);
+                $('#edit_allowances').val(config.allowance);
+                $('#edit_effective_date').val(config.effective_date);
+                
+                // 加载薪资等级选项并设置当前值
+                loadSalaryGradeOptionsForEdit(config.salary_grade_id);
+                
+                // 显示模态框
+                $('#editConfigModal').modal('show');
+            } else {
+                alert('加载配置数据失败: ' + response.error);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('加载配置数据失败:', error);
+            alert('加载配置数据失败，请稍后重试');
+        }
+    });
+}
+
+// 为编辑模态框加载薪资等级选项
+function loadSalaryGradeOptionsForEdit(selectedGradeId) {
+    $.ajax({
+        url: '{% url "salary_management:api_salary_grades" %}',
+        type: 'GET',
+        success: function(response) {
+            if (response.success) {
+                const gradeSelect = $('#edit_salary_grade');
+                gradeSelect.empty().append('<option value="">请选择薪资等级</option>');
+                
+                response.data.forEach(function(grade) {
+                    const optionText = `${grade.grade_name} (${grade.min_salary}-${grade.max_salary}元)`;
+                    const option = `<option value="${grade.id}" data-min="${grade.min_salary}" data-max="${grade.max_salary}">${optionText}</option>`;
+                    gradeSelect.append(option);
+                });
+                
+                // 设置选中的薪资等级
+                if (selectedGradeId) {
+                    gradeSelect.val(selectedGradeId);
+                    
+                    // 触发change事件以显示薪资建议
+                    const selectedOption = gradeSelect.find('option:selected');
+                    const minSalary = selectedOption.data('min');
+                    const maxSalary = selectedOption.data('max');
+                    
+                    if (minSalary && maxSalary) {
+                        $('#edit_salary_suggestion').text(`薪资范围: ${minSalary} - ${maxSalary} 元`);
+                    }
+                }
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('加载薪资等级失败:', error);
+        }
+    });
+}
+
+// 更新配置
+function updateConfig() {
+    const form = document.getElementById('editConfigForm');
+    
+    // 表单验证
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const configId = $('#edit_config_id').val();
+    
+    // 获取表单数据
+    const formData = {
+        salary_grade: $('#edit_salary_grade').val(),
+        base_salary: $('#edit_base_salary').val(),
+        performance_bonus: $('#edit_performance_bonus').val() || '0',
+        allowances: $('#edit_allowances').val() || '0',
+        effective_date: $('#edit_effective_date').val()
+    };
+    
+    // 显示加载状态
+    const updateBtn = $('#editConfigModal .btn-primary');
+    const originalText = updateBtn.text();
+    updateBtn.prop('disabled', true).text('保存中...');
+    
+    // 发送AJAX请求
+    $.ajax({
+        url: `{% url 'salary_management:api_update_config' 0 %}`.replace('0', configId),
+        type: 'POST',
+        data: JSON.stringify(formData),
+        contentType: 'application/json',
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                alert('薪资配置更新成功！');
+                $('#editConfigModal').modal('hide');
+                location.reload();
+            } else {
+                alert('更新失败: ' + response.error);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('更新配置失败:', error);
+            alert('更新配置失败，请稍后重试');
+        },
+        complete: function() {
+            // 恢复按钮状态
+            updateBtn.prop('disabled', false).text(originalText);
+        }
+    });
+}
+
+// 查看历史
+function viewHistory(employeeId) {
+    // 显示模态框
+    $('#historyModal').modal('show');
+    
+    // 重置内容为加载状态
+    $('#historyContent').html(`
+        <div class="text-center py-4">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">加载中...</span>
+            </div>
+            <p class="mt-2">正在加载历史记录...</p>
+        </div>
+    `);
+    
+    // 加载历史数据
+    $.ajax({
+        url: `{% url 'salary_management:api_salary_history' 0 %}`.replace('0', employeeId),
+        type: 'GET',
+        success: function(response) {
+            if (response.success) {
+                const data = response.data;
+                let historyHtml = `
+                    <div class="mb-3">
+                        <h6><i class="fas fa-user me-2"></i>${data.employee_name} (工号: ${data.employee_id})</h6>
+                    </div>
+                `;
+                
+                if (data.history.length > 0) {
+                    historyHtml += `
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>调整日期</th>
+                                        <th>调整类型</th>
+                                        <th>原工资</th>
+                                        <th>新工资</th>
+                                        <th>调整原因</th>
+                                        <th>状态</th>
+                                        <th>创建时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+                    
+                    data.history.forEach(function(record) {
+                        const statusClass = record.status === 'approved' ? 'success' : 
+                                          record.status === 'rejected' ? 'danger' : 'warning';
+                        
+                        historyHtml += `
+                            <tr>
+                                <td>${record.adjustment_date}</td>
+                                <td>${record.adjustment_type}</td>
+                                <td>${record.old_salary}</td>
+                                <td>${record.new_salary}</td>
+                                <td>${record.reason}</td>
+                                <td><span class="badge bg-${statusClass}">${record.status}</span></td>
+                                <td>${record.created_at}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    historyHtml += `
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    historyHtml += `
+                        <div class="text-center py-4">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">暂无薪资调整历史记录</p>
+                        </div>
+                    `;
+                }
+                
+                $('#historyContent').html(historyHtml);
+            } else {
+                $('#historyContent').html(`
+                    <div class="alert alert-danger" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        加载历史记录失败: ${response.error}
+                    </div>
+                `);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('加载历史记录失败:', error);
+            $('#historyContent').html(`
+                <div class="alert alert-danger" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    加载历史记录失败，请稍后重试
+                </div>
+            `);
+        }
+    });
+}
+
+// 停用配置
+function deactivateConfig(configId) {
+    if (confirm('确定要停用此薪资配置吗？停用后该配置将不再生效。')) {
+        $.ajax({
+            url: `{% url 'salary_management:api_deactivate_config' 0 %}`.replace('0', configId),
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    alert('薪资配置已停用！');
+                    location.reload();
+                } else {
+                    alert('停用失败: ' + response.error);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('停用配置失败:', error);
+                alert('停用配置失败，请稍后重试');
+            }
+        });
+    }
+}
+
+// 调整住房公积金比例
+function adjustHousingFundRate(employeeId, employeeName, currentRate) {
+    const newRate = prompt(`请输入 ${employeeName} 的新住房公积金缴费比例（当前: ${(currentRate * 100).toFixed(2)}%）\n\n请输入0-100之间的数值（如：12 表示12%）:`, (currentRate * 100).toFixed(2));
+    
+    if (newRate === null) {
+        return; // 用户取消
+    }
+    
+    const rateValue = parseFloat(newRate);
+    if (isNaN(rateValue) || rateValue < 0 || rateValue > 100) {
+        alert('请输入0-100之间的有效数值！');
+        return;
+    }
+    
+    const rateDecimal = rateValue / 100; // 转换为小数
+    
+    if (confirm(`确认将 ${employeeName} 的住房公积金缴费比例调整为 ${rateValue.toFixed(2)}% 吗？`)) {
+        $.ajax({
+            url: '{% url "salary_management:api_update_housing_fund_rate" %}',
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val(),
+                'Content-Type': 'application/json'
+            },
+            data: JSON.stringify({
+                employee_id: employeeId,
+                housing_fund_rate: rateDecimal
+            }),
+            success: function(response) {
+                if (response.success) {
+                    alert(response.message);
+                    location.reload();
+                } else {
+                    alert('调整失败: ' + response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('调整住房公积金比例失败:', error);
+                alert('调整失败，请稍后重试');
+            }
+        });
+    }
+}
+</script>
+{% endblock %}
