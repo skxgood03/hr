@@ -13,6 +13,7 @@ urlpatterns = [
     path('insert/',DepartmentAddView.as_view(),name='insert'),
     path('add/',DepartmentAddView.as_view(),name='add'),  # 添加别名用于前端
     path('getList/',DepartmentListView.as_view(),name='list'),
+    path('api/list/',DepartmentListView.as_view(),name='api_list'),  # 添加API路径
     path('update/',DepartmentUpdateView.as_view(),name='update'),
     path('delete/',DepartmentDeleteView.as_view(),name='delete'),
     path('batch-delete/',DepartmentBatchDeleteView.as_view(),name='batch_delete'),

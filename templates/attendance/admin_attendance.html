@@ -1,0 +1,715 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}考勤数据管理{% endblock %}
+
+{% block page_title %}考勤数据管理{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">首页</a></li>
+        <li class="breadcrumb-item active" aria-current="page">考勤数据管理</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 统计概览 -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card stat-card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">总员工数</h6>
+                            <h3 class="mb-0" id="totalEmployees">-</h3>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-2">
+            <div class="card stat-card bg-secondary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">总记录数</h6>
+                            <h3 class="mb-0" id="totalRecords">-</h3>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 查询条件 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">查询条件</h5>
+        </div>
+        <div class="card-body">
+            <form id="searchForm" class="row g-3">
+                <div class="col-md-2">
+                    <label for="recordType" class="form-label">记录类型</label>
+                    <select class="form-select" id="recordType" name="type">
+                        <option value="clock">打卡记录</option>
+                        <option value="leave">请假记录</option>
+                        <option value="overtime">加班记录</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="employeeSearch" class="form-label">员工搜索</label>
+                    <input type="text" class="form-control" id="employeeSearch" name="employee" placeholder="姓名/工号">
+                </div>
+                <div class="col-md-2">
+                    <label for="departmentFilter" class="form-label">部门</label>
+                    <select class="form-select" id="departmentFilter" name="department">
+                        <option value="">全部部门</option>
+                        <!-- 动态加载部门选项 -->
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="startDate" class="form-label">开始日期</label>
+                    <input type="date" class="form-control" id="startDate" name="start_date">
+                </div>
+                <div class="col-md-2">
+                    <label for="endDate" class="form-label">结束日期</label>
+                    <input type="date" class="form-control" id="endDate" name="end_date">
+                </div>
+                <div class="col-md-2">
+                    <label for="status" class="form-label">状态</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">全部状态</option>
+                        <option value="NORMAL">正常</option>
+                        <option value="LATE">迟到</option>
+                        <option value="EARLY">早退</option>
+                        <option value="ABSENT">缺勤</option>
+                        <option value="PENDING">待审批</option>
+                        <option value="APPROVED">已批准</option>
+                        <option value="REJECTED">已拒绝</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="button" class="btn btn-primary" onclick="searchRecords()">
+                        <i class="fas fa-search"></i> 查询
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="resetSearch()">
+                        <i class="fas fa-undo"></i> 重置
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="exportRecords()">
+                        <i class="fas fa-file-excel"></i> 导出Excel
+                    </button>
+                    <button type="button" class="btn btn-info" onclick="showImportModal()">
+                        <i class="fas fa-upload"></i> 批量导入
+                    </button>
+
+                    <button type="button" class="btn btn-dark" onclick="syncData()">
+                        <i class="fas fa-sync"></i> 数据同步
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 记录列表 -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">考勤记录列表</h5>
+            <div>
+                <span class="text-muted me-3">每页显示：</span>
+                <select class="form-select form-select-sm d-inline-block" style="width: auto;" id="pageSizeSelect" onchange="changePageSize()">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                <button class="btn btn-sm btn-outline-primary ms-2" onclick="refreshData()">
+                    <i class="fas fa-sync-alt"></i> 刷新
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover" id="recordsTable">
+                    <thead class="table-dark">
+                        <tr id="tableHeader">
+                            <!-- 动态生成表头 -->
+                        </tr>
+                    </thead>
+                    <tbody id="recordsTableBody">
+                        <!-- 动态生成数据行 -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 分页 -->
+            <nav aria-label="Page navigation" class="mt-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-muted">
+                        显示第 <span id="recordStart">0</span> - <span id="recordEnd">0</span> 条，共 <span id="totalCount">0</span> 条记录
+                    </div>
+                    <ul class="pagination mb-0" id="pagination">
+                        <!-- 动态生成分页 -->
+                    </ul>
+                </div>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- 批量导入模态框 -->
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">批量导入考勤记录</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="importFile" class="form-label">选择Excel文件</label>
+                    <input type="file" class="form-control" id="importFile" accept=".xlsx,.xls" onchange="previewImportFile()">
+                    <div class="form-text">
+                        支持.xlsx和.xls格式，请确保文件格式正确。
+                        <a href="#" onclick="downloadTemplate()">下载模板文件</a>
+                    </div>
+                </div>
+                <div id="importPreview" class="d-none">
+                    <h6>文件预览：</h6>
+                    <div class="table-responsive" style="max-height: 300px;">
+                        <table class="table table-sm table-bordered" id="previewTable">
+                            <!-- 预览内容 -->
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="confirmImport()" id="confirmImportBtn" disabled>
+                    <i class="fas fa-upload"></i> 确认导入
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 加载提示 -->
+<div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">处理中...</span>
+                </div>
+                <p class="mt-2 mb-0" id="loadingText">数据加载中，请稍候...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 全局变量
+let currentPage = 1;
+let pageSize = 20;
+let currentType = 'clock';
+let importFileData = null;
+
+// 页面加载完成后初始化
+$(document).ready(function() {
+    // 确保加载模态框是隐藏的
+    $('#loadingModal').modal('hide');
+    
+    // 设置默认日期范围（本月）
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    
+    $('#startDate').val(formatDate(firstDay));
+    $('#endDate').val(formatDate(lastDay));
+    $('#pageSizeSelect').val(pageSize);
+    
+    // 加载数据
+    loadDepartments();
+    loadStatistics();
+    searchRecords();
+    
+    // 记录类型变化时更新表头
+    $('#recordType').change(function() {
+        currentType = $(this).val();
+        updateTableHeader();
+        searchRecords();
+    });
+});
+
+// 格式化日期
+function formatDate(date) {
+    return date.getFullYear() + '-' + 
+           String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+           String(date.getDate()).padStart(2, '0');
+}
+
+// 加载部门列表
+function loadDepartments() {
+    $.get('/department/api/list/', function(response) {
+        if (response.code === 2000) {
+            let options = '<option value="">全部部门</option>';
+            response.data.forEach(dept => {
+                options += `<option value="${dept.id}">${dept.name}</option>`;
+            });
+            $('#departmentFilter').html(options);
+        }
+    });
+}
+
+// 加载统计数据
+function loadStatistics() {
+    const today = formatDate(new Date());
+    
+    // 获取今日各类统计
+    $.get('/attendance/api/statistics/daily/', {
+        date: today
+    }, function(response) {
+        if (response.code === 2000) {
+            const stats = response.data;
+            $('#todayClockCount').text(stats.clock_in_count || 0);
+            $('#todayLateCount').text(stats.late_count || 0);
+            $('#pendingApprovalCount').text(stats.leave_count || 0);
+            $('#abnormalCount').text(stats.overtime_count || 0);
+        } else if (response.code === 4001 || response.code === 4002) {
+            // 未登录，跳转到登录页面
+            window.location.href = '/login/';
+        }
+    }).fail(function() {
+        console.log('获取统计数据失败');
+    });
+    
+    // 获取总体统计
+    $.get('/attendance/api/records/', {
+        page_size: 1
+    }, function(response) {
+        if (response.code === 2000) {
+            $('#totalRecords').text(response.data.pagination.total_count || 0);
+        } else if (response.code === 4001 || response.code === 4002) {
+            // 未登录，跳转到登录页面
+            window.location.href = '/login/';
+        }
+    }).fail(function() {
+        console.log('获取总记录数失败');
+    });
+    
+    // 获取员工总数（假设有员工API）
+    $('#totalEmployees').text('-');
+}
+
+// 更新表头
+function updateTableHeader() {
+    let headerHtml = '<th>员工</th><th>部门</th>';
+    
+    if (currentType === 'clock') {
+        headerHtml += `
+            <th>打卡类型</th>
+            <th>打卡时间</th>
+            <th>地点</th>
+            <th>设备</th>
+            <th>状态</th>
+        `;
+    } else if (currentType === 'leave') {
+        headerHtml += `
+            <th>请假类型</th>
+            <th>开始时间</th>
+            <th>结束时间</th>
+            <th>时长(小时)</th>
+            <th>原因</th>
+            <th>状态</th>
+            <th>审批人</th>
+            <th>审批时间</th>
+        `;
+    } else if (currentType === 'overtime') {
+        headerHtml += `
+            <th>加班类型</th>
+            <th>开始时间</th>
+            <th>结束时间</th>
+            <th>时长(小时)</th>
+            <th>原因</th>
+            <th>状态</th>
+            <th>审批人</th>
+            <th>审批时间</th>
+        `;
+    }
+    
+    $('#tableHeader').html(headerHtml);
+}
+
+// 查询记录
+function searchRecords(page = 1) {
+    currentPage = page;
+    
+    const formData = {
+        type: $('#recordType').val(),
+        employee: $('#employeeSearch').val(),
+        department: $('#departmentFilter').val(),
+        start_date: $('#startDate').val(),
+        end_date: $('#endDate').val(),
+        status: $('#status').val(),
+        page: currentPage,
+        page_size: pageSize,
+        admin_view: true
+    };
+    
+    // 显示加载提示
+    {#$('#loadingModal').modal('show');#}
+    {#$('#loadingText').text('数据查询中，请稍候...');#}
+    
+    $.get('/attendance/api/records/', formData, function(response) {
+        console.log('API响应:', response);
+        // 强制隐藏模态框
+        $('#loadingModal').modal('hide');
+        $('#loadingModal').hide();
+        $('.modal-backdrop').remove();
+        $('body').removeClass('modal-open');
+        
+        if (response.code === 2000) {
+            console.log('数据加载成功，记录数:', response.data.records.length);
+            renderRecordsTable(response.data.records);
+            renderPagination(response.data.pagination);
+            updateRecordInfo(response.data.pagination);
+        } else if (response.code === 4001 || response.code === 4002) {
+            // 未登录或用户不存在，跳转到登录页面
+            showAlert('请先登录', 'warning');
+            setTimeout(() => {
+                window.location.href = '/login/';
+            }, 1500);
+        } else {
+            showAlert('查询失败：' + response.message, 'danger');
+        }
+    }).fail(function() {
+        // 强制隐藏模态框
+        $('#loadingModal').modal('hide');
+        $('#loadingModal').hide();
+        $('.modal-backdrop').remove();
+        $('body').removeClass('modal-open');
+        showAlert('网络错误，请稍后重试', 'danger');
+    });
+}
+
+// 渲染记录表格
+function renderRecordsTable(records) {
+    let html = '';
+    
+    if (records.length === 0) {
+        html = '<tr><td colspan="100%" class="text-center text-muted">暂无数据</td></tr>';
+    } else {
+        records.forEach(record => {
+            html += '<tr>';
+            html += `<td>${record.employee_name}</td>`;
+            html += `<td>${record.department_name || '-'}</td>`;
+            
+            if (currentType === 'clock') {
+                html += `
+                    <td><span class="badge bg-${record.clock_type === 'IN' ? 'success' : 'warning'}">${record.clock_type_display}</span></td>
+                    <td>${record.clock_time}</td>
+                    <td>${record.location || '-'}</td>
+                    <td>${record.device || '-'}</td>
+                    <td><span class="badge bg-${getStatusColor(record.status)}">${record.status_display}</span></td>
+                `;
+            } else if (currentType === 'leave') {
+                html += `
+                    <td><span class="badge bg-info">${record.leave_type_display}</span></td>
+                    <td>${record.start_time}</td>
+                    <td>${record.end_time}</td>
+                    <td>${record.duration_hours}</td>
+                    <td>${record.reason || '-'}</td>
+                    <td><span class="badge bg-${getStatusColor(record.status)}">${record.status_display}</span></td>
+                    <td>${record.approver_name || '-'}</td>
+                    <td>${record.approved_at || '-'}</td>
+                `;
+            } else if (currentType === 'overtime') {
+                html += `
+                    <td><span class="badge bg-primary">${record.overtime_type_display}</span></td>
+                    <td>${record.start_time}</td>
+                    <td>${record.end_time}</td>
+                    <td>${record.duration_hours}</td>
+                    <td>${record.reason || '-'}</td>
+                    <td><span class="badge bg-${getStatusColor(record.status)}">${record.status_display}</span></td>
+                    <td>${record.approver_name || '-'}</td>
+                    <td>${record.approved_at || '-'}</td>
+                `;
+            }
+            
+            html += '</tr>';
+        });
+    }
+    
+    $('#recordsTableBody').html(html);
+}
+
+// 获取状态颜色
+function getStatusColor(status) {
+    const colorMap = {
+        'NORMAL': 'success',
+        'LATE': 'warning',
+        'EARLY': 'warning',
+        'ABSENT': 'danger',
+        'PENDING': 'secondary',
+        'APPROVED': 'success',
+        'REJECTED': 'danger'
+    };
+    return colorMap[status] || 'secondary';
+}
+
+// 渲染分页
+function renderPagination(pagination) {
+    let html = '';
+    
+    // 上一页
+    if (pagination.has_previous) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="searchRecords(${currentPage - 1})">上一页</a></li>`;
+    } else {
+        html += '<li class="page-item disabled"><span class="page-link">上一页</span></li>';
+    }
+    
+    // 页码
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(pagination.total_pages, currentPage + 2);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        if (i === currentPage) {
+            html += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+        } else {
+            html += `<li class="page-item"><a class="page-link" href="#" onclick="searchRecords(${i})">${i}</a></li>`;
+        }
+    }
+    
+    // 下一页
+    if (pagination.has_next) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="searchRecords(${currentPage + 1})">下一页</a></li>`;
+    } else {
+        html += '<li class="page-item disabled"><span class="page-link">下一页</span></li>';
+    }
+    
+    $('#pagination').html(html);
+}
+
+// 更新记录信息
+function updateRecordInfo(pagination) {
+    const start = (currentPage - 1) * pageSize + 1;
+    const end = Math.min(currentPage * pageSize, pagination.total_count);
+    
+    $('#recordStart').text(start);
+    $('#recordEnd').text(end);
+    $('#totalCount').text(pagination.total_count);
+}
+
+// 改变每页显示数量
+function changePageSize() {
+    pageSize = parseInt($('#pageSizeSelect').val());
+    currentPage = 1;
+    searchRecords();
+}
+
+// 重置搜索
+function resetSearch() {
+    $('#searchForm')[0].reset();
+    
+    // 重新设置默认值
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    
+    $('#startDate').val(formatDate(firstDay));
+    $('#endDate').val(formatDate(lastDay));
+    $('#recordType').val('clock');
+    $('#pageSizeSelect').val(pageSize);
+    
+    currentType = 'clock';
+    currentPage = 1;
+    updateTableHeader();
+    searchRecords();
+}
+
+// 刷新数据
+function refreshData() {
+    loadStatistics();
+    searchRecords(currentPage);
+}
+
+// 导出Excel
+function exportRecords() {
+    const formData = {
+        type: $('#recordType').val(),
+        employee: $('#employeeSearch').val(),
+        department: $('#departmentFilter').val(),
+        start_date: $('#startDate').val(),
+        end_date: $('#endDate').val(),
+        status: $('#status').val(),
+        admin_view: true,
+        export: 'excel'
+    };
+    
+    const params = new URLSearchParams(formData).toString();
+    window.open(`/attendance/api/records/?${params}`, '_blank');
+}
+
+// 显示导入模态框
+function showImportModal() {
+    $('#importModal').modal('show');
+    $('#importFile').val('');
+    $('#importPreview').addClass('d-none');
+    $('#confirmImportBtn').prop('disabled', true);
+    importFileData = null;
+}
+
+// 预览导入文件
+function previewImportFile() {
+    const file = $('#importFile')[0].files[0];
+    if (!file) {
+        $('#importPreview').addClass('d-none');
+        $('#confirmImportBtn').prop('disabled', true);
+        return;
+    }
+    
+    // 这里应该使用文件读取库来解析Excel文件
+    // 简化处理，显示文件信息
+    $('#importPreview').removeClass('d-none');
+    $('#previewTable').html(`
+        <thead>
+            <tr><th>文件名</th><th>大小</th><th>类型</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>${file.name}</td>
+                <td>${(file.size / 1024).toFixed(2)} KB</td>
+                <td>${file.type}</td>
+            </tr>
+        </tbody>
+    `);
+    
+    $('#confirmImportBtn').prop('disabled', false);
+    importFileData = file;
+}
+
+// 确认导入
+function confirmImport() {
+    if (!importFileData) {
+        showAlert('请先选择文件', 'warning');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', importFileData);
+    formData.append('type', currentType);
+    
+    $('#loadingModal').modal('show');
+    $('#loadingText').text('文件上传中，请稍候...');
+    
+    $.ajax({
+        url: '/attendance/api/import/',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            $('#loadingModal').modal('hide');
+            $('#importModal').modal('hide');
+            
+            if (response.code === 2000) {
+                showAlert(`导入成功！共导入 ${response.data.success_count} 条记录`, 'success');
+                refreshData();
+            } else {
+                showAlert('导入失败：' + response.message, 'danger');
+            }
+        },
+        error: function() {
+            $('#loadingModal').modal('hide');
+            showAlert('导入失败，请稍后重试', 'danger');
+        }
+    });
+}
+
+// 下载模板文件
+function downloadTemplate() {
+    window.open(`/attendance/api/template/?type=${currentType}`, '_blank');
+}
+
+// 运行异常检测
+function runDetection() {
+    $('#loadingModal').modal('show');
+    $('#loadingText').text('异常检测中，请稍候...');
+    
+    $.post('/attendance/api/detection/manual/', {
+        csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+    }, function(response) {
+        $('#loadingModal').modal('hide');
+        
+        if (response.code === 2000) {
+            const result = response.data;
+            showAlert(`检测完成！发现 ${result.abnormal_count} 条异常记录`, 'info');
+            refreshData();
+        } else {
+            showAlert('检测失败：' + response.message, 'danger');
+        }
+    }).fail(function() {
+        $('#loadingModal').modal('hide');
+        showAlert('检测失败，请稍后重试', 'danger');
+    });
+}
+
+// 数据同步
+function syncData() {
+    $('#loadingModal').modal('show');
+    $('#loadingText').text('数据同步中，请稍候...');
+    
+    $.post('/attendance/api/sync/manual/', {
+        csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+    }, function(response) {
+        $('#loadingModal').modal('hide');
+        
+        if (response.code === 2000) {
+            const result = response.data;
+            showAlert(`同步完成！同步了 ${result.synced_count} 条记录`, 'success');
+            refreshData();
+        } else {
+            showAlert('同步失败：' + response.message, 'danger');
+        }
+    }).fail(function() {
+        $('#loadingModal').modal('hide');
+        showAlert('同步失败，请稍后重试', 'danger');
+    });
+}
+
+// 显示提示信息
+function showAlert(message, type = 'info') {
+    const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    // 在页面顶部显示提示
+    $('.container-fluid').prepend(alertHtml);
+    
+    // 5秒后自动关闭
+    setTimeout(() => {
+        $('.alert').alert('close');
+    }, 5000);
+}
+
+// 初始化表头
+updateTableHeader();
+</script>
+{% endblock %}

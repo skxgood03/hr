@@ -36,6 +36,7 @@ urlpatterns = [
     path('train/', include('train.urls')),
     path('salary/', include('salary_management.urls')),
     path('hr/', include('hr.urls')),
+    path('attendance/', include('attendance.urls')),
 ]
 
 # 静态文件服务配置（仅在DEBUG模式下）
