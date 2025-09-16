@@ -44,6 +44,11 @@ class LoginView(APIView):
                     request.session['username'] = username
                     request.session['user_id'] = user.id
                     request.session['user_role'] = user.role.name if user.role else None
+                    
+                    # 为员工角色用户设置employee_id
+                    if user.role and user.role.name == 'EMPLOYEE' and user.employee_id:
+                        request.session['employee_id'] = user.employee_id
+                    
                     # 根据用户角色确定重定向URL
                     redirect_url = '/hr/employee/center/' if user.role.name == 'EMPLOYEE' else '/'
                     return Response(ResultVo.success("登陆成功",{'username':username, 'redirect_url': redirect_url}))
@@ -172,6 +177,13 @@ def employee_salary_detail(request, salary_id):
             status__in=['APPROVED', 'PAID']
         )
         
+        # 获取考勤薪资明细
+        attendance_detail = None
+        try:
+            attendance_detail = salary_record.attendance_detail
+        except:
+            pass
+        
         data = {
             'id': salary_record.id,
             'employee_name': salary_record.employee.name,
@@ -192,6 +204,33 @@ def employee_salary_detail(request, salary_id):
             'pay_date': salary_record.pay_date.strftime('%Y-%m-%d') if salary_record.pay_date else None,
             'bank_account': salary_record.bank_account or '',
             'remarks': salary_record.remarks or '',
+            # 考勤薪资明细
+            'attendance_detail': {
+                'actual_work_days': attendance_detail.actual_work_days if attendance_detail else 0,
+                'actual_work_hours': float(attendance_detail.actual_work_hours) if attendance_detail else 0,
+                'personal_leave_hours': float(attendance_detail.personal_leave_hours) if attendance_detail else 0,
+                'sick_leave_hours': float(attendance_detail.sick_leave_hours) if attendance_detail else 0,
+                'annual_leave_hours': float(attendance_detail.annual_leave_hours) if attendance_detail else 0,
+                'other_leave_hours': float(attendance_detail.other_leave_hours) if attendance_detail else 0,
+                'weekday_overtime_hours': float(attendance_detail.weekday_overtime_hours) if attendance_detail else 0,
+                'weekend_overtime_hours': float(attendance_detail.weekend_overtime_hours) if attendance_detail else 0,
+                'holiday_overtime_hours': float(attendance_detail.holiday_overtime_hours) if attendance_detail else 0,
+                'late_minutes': attendance_detail.late_minutes if attendance_detail else 0,
+                'early_leave_minutes': attendance_detail.early_leave_minutes if attendance_detail else 0,
+                'missing_clock_days': attendance_detail.missing_clock_days if attendance_detail else 0,
+                'normal_work_pay': float(attendance_detail.normal_work_pay) if attendance_detail else 0,
+                'leave_deduction': float(attendance_detail.leave_deduction) if attendance_detail else 0,
+                'overtime_pay_detail': float(attendance_detail.overtime_pay) if attendance_detail else 0,
+                'late_early_deduction': float(attendance_detail.late_early_deduction) if attendance_detail else 0,
+                # 计算具体的加班费和扣款明细
+                'weekday_overtime_pay': float(attendance_detail.weekday_overtime_hours * (salary_record.basic_salary / 22 / 8) * attendance_detail.calculation_rule.weekday_overtime_rate) if attendance_detail and attendance_detail.weekday_overtime_hours > 0 else 0,
+                'weekend_overtime_pay': float(attendance_detail.weekend_overtime_hours * (salary_record.basic_salary / 22 / 8) * attendance_detail.calculation_rule.weekend_overtime_rate) if attendance_detail and attendance_detail.weekend_overtime_hours > 0 else 0,
+                'holiday_overtime_pay': float(attendance_detail.holiday_overtime_hours * (salary_record.basic_salary / 22 / 8) * attendance_detail.calculation_rule.holiday_overtime_rate) if attendance_detail and attendance_detail.holiday_overtime_hours > 0 else 0,
+                'late_deduction': float(attendance_detail.late_minutes * attendance_detail.calculation_rule.late_deduction_per_minute) if attendance_detail and attendance_detail.late_minutes > 0 else 0,
+                'early_leave_deduction': float(attendance_detail.early_leave_minutes * attendance_detail.calculation_rule.early_leave_deduction_per_minute) if attendance_detail and attendance_detail.early_leave_minutes > 0 else 0,
+                'missing_clock_deduction': float(attendance_detail.missing_clock_days * (salary_record.basic_salary / 22)) if attendance_detail and attendance_detail.missing_clock_days > 0 else 0,
+                'attendance_bonus': 0,  # 全勤奖暂时设为0，可根据业务需求计算
+            } if attendance_detail else None,
         }
         
         return JsonResponse({'success': True, 'data': data})

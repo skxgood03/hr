@@ -41,6 +41,7 @@ def get_attendance_records(request):
         page_size = int(request.GET.get('page_size', 10))
         record_type = request.GET.get('type', 'clock')  # clock, leave, overtime
         employee_id = request.GET.get('employee_id')
+        employee_search = request.GET.get('employee')  # 员工姓名或工号搜索
         start_date = request.GET.get('start_date')
         end_date = request.GET.get('end_date')
         status = request.GET.get('status')
@@ -66,6 +67,12 @@ def get_attendance_records(request):
         # 筛选条件
         if employee_id:
             queryset = queryset.filter(employee_id=employee_id)
+        elif employee_search:
+            # 支持按员工姓名或工号搜索
+            queryset = queryset.filter(
+                Q(employee__name__icontains=employee_search) |
+                Q(employee__identity__icontains=employee_search)
+            )
         
         if start_date:
             start_datetime = datetime.strptime(start_date, '%Y-%m-%d')

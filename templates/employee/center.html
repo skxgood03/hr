@@ -595,6 +595,28 @@ function displaySalaryDetail(salary) {
                     <span class="detail-label">加班费</span>
                     <span class="detail-value amount-positive">¥${salary.overtime_pay.toFixed(2)}</span>
                 </div>
+                ${salary.attendance_detail ? `
+                    ${salary.attendance_detail.weekday_overtime_pay > 0 ? `
+                    <div class="detail-item" style="padding-left: 20px; font-size: 0.9em; color: #666;">
+                        <span class="detail-label">　- 工作日加班费</span>
+                        <span class="detail-value amount-positive">¥${salary.attendance_detail.weekday_overtime_pay.toFixed(2)}</span>
+                    </div>` : ''}
+                    ${salary.attendance_detail.weekend_overtime_pay > 0 ? `
+                    <div class="detail-item" style="padding-left: 20px; font-size: 0.9em; color: #666;">
+                        <span class="detail-label">　- 周末加班费</span>
+                        <span class="detail-value amount-positive">¥${salary.attendance_detail.weekend_overtime_pay.toFixed(2)}</span>
+                    </div>` : ''}
+                    ${salary.attendance_detail.holiday_overtime_pay > 0 ? `
+                    <div class="detail-item" style="padding-left: 20px; font-size: 0.9em; color: #666;">
+                        <span class="detail-label">　- 节假日加班费</span>
+                        <span class="detail-value amount-positive">¥${salary.attendance_detail.holiday_overtime_pay.toFixed(2)}</span>
+                    </div>` : ''}
+                    ${salary.attendance_detail.attendance_bonus > 0 ? `
+                    <div class="detail-item">
+                        <span class="detail-label">全勤奖</span>
+                        <span class="detail-value amount-positive">¥${salary.attendance_detail.attendance_bonus.toFixed(2)}</span>
+                    </div>` : ''}
+                ` : ''}
                 <div class="detail-item" style="border-top: 2px solid #28a745; padding-top: 10px; margin-top: 10px;">
                     <span class="detail-label"><strong>应发工资</strong></span>
                     <span class="detail-value amount-positive"><strong>¥${salary.gross_salary.toFixed(2)}</strong></span>
@@ -619,12 +641,118 @@ function displaySalaryDetail(salary) {
                     <span class="detail-label">其他扣款</span>
                     <span class="detail-value amount-negative">¥${salary.other_deduction.toFixed(2)}</span>
                 </div>
+                ${salary.attendance_detail ? `
+                    ${salary.attendance_detail.late_deduction > 0 ? `
+                    <div class="detail-item">
+                        <span class="detail-label">迟到扣款</span>
+                        <span class="detail-value amount-negative">-¥${salary.attendance_detail.late_deduction.toFixed(2)}</span>
+                    </div>` : ''}
+                    ${salary.attendance_detail.early_leave_deduction > 0 ? `
+                    <div class="detail-item">
+                        <span class="detail-label">早退扣款</span>
+                        <span class="detail-value amount-negative">-¥${salary.attendance_detail.early_leave_deduction.toFixed(2)}</span>
+                    </div>` : ''}
+                    ${salary.attendance_detail.missing_clock_deduction > 0 ? `
+                    <div class="detail-item">
+                        <span class="detail-label">缺卡扣款</span>
+                        <span class="detail-value amount-negative">-¥${salary.attendance_detail.missing_clock_deduction.toFixed(2)}</span>
+                    </div>` : ''}
+                    ${salary.attendance_detail.leave_deduction > 0 ? `
+                    <div class="detail-item">
+                        <span class="detail-label">请假扣款</span>
+                        <span class="detail-value amount-negative">-¥${salary.attendance_detail.leave_deduction.toFixed(2)}</span>
+                    </div>` : ''}
+                ` : ''}
                 <div class="detail-item" style="border-top: 2px solid #dc3545; padding-top: 10px; margin-top: 10px;">
                     <span class="detail-label"><strong>扣款合计</strong></span>
-                    <span class="detail-value amount-negative"><strong>¥${salary.total_deduction.toFixed(2)}</strong></span>
+                    <span class="detail-value amount-negative"><strong>-¥${salary.total_deduction.toFixed(2)}</strong></span>
                 </div>
             </div>
         </div>
+        
+        ${salary.attendance_detail ? `
+        <div style="margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
+            <h4 style="color: #2c3e50; margin-bottom: 20px; text-align: center;">考勤数据详情</h4>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                <!-- 出勤统计 -->
+                <div style="background: white; padding: 15px; border-radius: 6px; border-left: 4px solid #28a745;">
+                    <h6 style="color: #28a745; margin-bottom: 10px;">出勤统计</h6>
+                    <div style="font-size: 0.9em;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>实际工作天数:</span>
+                            <span><strong>${salary.attendance_detail.actual_work_days} 天</strong></span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>实际工作时长:</span>
+                            <span><strong>${salary.attendance_detail.actual_work_hours.toFixed(2)} 小时</strong></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 请假统计 -->
+                <div style="background: white; padding: 15px; border-radius: 6px; border-left: 4px solid #ffc107;">
+                    <h6 style="color: #ffc107; margin-bottom: 10px;">请假统计</h6>
+                    <div style="font-size: 0.9em;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>事假:</span>
+                            <span>${salary.attendance_detail.personal_leave_hours.toFixed(2)} 小时</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>病假:</span>
+                            <span>${salary.attendance_detail.sick_leave_hours.toFixed(2)} 小时</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>年假:</span>
+                            <span>${salary.attendance_detail.annual_leave_hours.toFixed(2)} 小时</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>其他假期:</span>
+                            <span>${salary.attendance_detail.other_leave_hours.toFixed(2)} 小时</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 加班统计 -->
+                <div style="background: white; padding: 15px; border-radius: 6px; border-left: 4px solid #17a2b8;">
+                    <h6 style="color: #17a2b8; margin-bottom: 10px;">加班统计</h6>
+                    <div style="font-size: 0.9em;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>工作日加班:</span>
+                            <span>${salary.attendance_detail.weekday_overtime_hours.toFixed(2)} 小时</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>周末加班:</span>
+                            <span>${salary.attendance_detail.weekend_overtime_hours.toFixed(2)} 小时</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>节假日加班:</span>
+                            <span>${salary.attendance_detail.holiday_overtime_hours.toFixed(2)} 小时</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 异常统计 -->
+                <div style="background: white; padding: 15px; border-radius: 6px; border-left: 4px solid #dc3545;">
+                    <h6 style="color: #dc3545; margin-bottom: 10px;">异常统计</h6>
+                    <div style="font-size: 0.9em;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>迟到:</span>
+                            <span style="color: #dc3545;">${salary.attendance_detail.late_minutes} 分钟</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>早退:</span>
+                            <span style="color: #dc3545;">${salary.attendance_detail.early_leave_minutes} 分钟</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>缺卡:</span>
+                            <span style="color: #dc3545;">${salary.attendance_detail.missing_clock_days} 天</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        ` : ''}
         
         <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; margin-top: 20px;">
             <h3 style="margin: 0; font-size: 24px;">实发工资：¥${salary.net_salary.toFixed(2)}</h3>

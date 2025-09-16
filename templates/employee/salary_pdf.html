@@ -275,6 +275,32 @@
                         <td>加班费</td>
                         <td class="amount positive">{{ salary.overtime_pay|floatformat:2 }}</td>
                     </tr>
+                    {% if salary.attendance_detail %}
+                    {% if salary.attendance_detail.weekday_overtime_pay > 0 %}
+                    <tr>
+                        <td>　- 工作日加班费</td>
+                        <td class="amount positive">{{ salary.attendance_detail.weekday_overtime_pay|floatformat:2 }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if salary.attendance_detail.weekend_overtime_pay > 0 %}
+                    <tr>
+                        <td>　- 周末加班费</td>
+                        <td class="amount positive">{{ salary.attendance_detail.weekend_overtime_pay|floatformat:2 }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if salary.attendance_detail.holiday_overtime_pay > 0 %}
+                    <tr>
+                        <td>　- 节假日加班费</td>
+                        <td class="amount positive">{{ salary.attendance_detail.holiday_overtime_pay|floatformat:2 }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if salary.attendance_detail.attendance_bonus > 0 %}
+                    <tr>
+                        <td>全勤奖</td>
+                        <td class="amount positive">{{ salary.attendance_detail.attendance_bonus|floatformat:2 }}</td>
+                    </tr>
+                    {% endif %}
+                    {% endif %}
                     <tr class="total-row">
                         <td><strong>应发工资合计</strong></td>
                         <td class="amount positive"><strong>{{ salary.gross_salary|floatformat:2 }}</strong></td>
@@ -308,6 +334,32 @@
                         <td>其他扣款</td>
                         <td class="amount negative">{{ salary.other_deduction|floatformat:2 }}</td>
                     </tr>
+                    {% if salary.attendance_detail %}
+                    {% if salary.attendance_detail.late_deduction > 0 %}
+                    <tr>
+                        <td>迟到扣款</td>
+                        <td class="amount negative">{{ salary.attendance_detail.late_deduction|floatformat:2 }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if salary.attendance_detail.early_leave_deduction > 0 %}
+                    <tr>
+                        <td>早退扣款</td>
+                        <td class="amount negative">{{ salary.attendance_detail.early_leave_deduction|floatformat:2 }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if salary.attendance_detail.missing_clock_deduction > 0 %}
+                    <tr>
+                        <td>缺卡扣款</td>
+                        <td class="amount negative">{{ salary.attendance_detail.missing_clock_deduction|floatformat:2 }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if salary.attendance_detail.leave_deduction > 0 %}
+                    <tr>
+                        <td>请假扣款</td>
+                        <td class="amount negative">{{ salary.attendance_detail.leave_deduction|floatformat:2 }}</td>
+                    </tr>
+                    {% endif %}
+                    {% endif %}
                     <tr class="total-row">
                         <td><strong>扣款合计</strong></td>
                         <td class="amount negative"><strong>{{ salary.total_deduction|floatformat:2 }}</strong></td>
@@ -315,6 +367,97 @@
                 </tbody>
             </table>
         </div>
+        
+        <!-- 考勤数据详情 -->
+        {% if salary.attendance_detail %}
+        <div class="attendance-details" style="margin: 30px 0;">
+            <div class="section-title">考勤数据详情</div>
+            
+            <!-- 出勤统计 -->
+            <div style="margin-bottom: 20px;">
+                <h4 style="color: #2c3e50; margin-bottom: 10px; font-size: 16px;">出勤统计</h4>
+                <table class="salary-table">
+                    <tbody>
+                        <tr>
+                            <td>实际工作天数</td>
+                            <td class="amount">{{ salary.attendance_detail.actual_work_days }} 天</td>
+                        </tr>
+                        <tr>
+                            <td>实际工作时长</td>
+                            <td class="amount">{{ salary.attendance_detail.actual_work_hours|floatformat:2 }} 小时</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 请假统计 -->
+            <div style="margin-bottom: 20px;">
+                <h4 style="color: #2c3e50; margin-bottom: 10px; font-size: 16px;">请假统计</h4>
+                <table class="salary-table">
+                    <tbody>
+                        <tr>
+                            <td>事假时长</td>
+                            <td class="amount">{{ salary.attendance_detail.personal_leave_hours|floatformat:2 }} 小时</td>
+                        </tr>
+                        <tr>
+                            <td>病假时长</td>
+                            <td class="amount">{{ salary.attendance_detail.sick_leave_hours|floatformat:2 }} 小时</td>
+                        </tr>
+                        <tr>
+                            <td>年假时长</td>
+                            <td class="amount">{{ salary.attendance_detail.annual_leave_hours|floatformat:2 }} 小时</td>
+                        </tr>
+                        <tr>
+                            <td>其他假期时长</td>
+                            <td class="amount">{{ salary.attendance_detail.other_leave_hours|floatformat:2 }} 小时</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 加班统计 -->
+            <div style="margin-bottom: 20px;">
+                <h4 style="color: #2c3e50; margin-bottom: 10px; font-size: 16px;">加班统计</h4>
+                <table class="salary-table">
+                    <tbody>
+                        <tr>
+                            <td>工作日加班时长</td>
+                            <td class="amount">{{ salary.attendance_detail.weekday_overtime_hours|floatformat:2 }} 小时</td>
+                        </tr>
+                        <tr>
+                            <td>周末加班时长</td>
+                            <td class="amount">{{ salary.attendance_detail.weekend_overtime_hours|floatformat:2 }} 小时</td>
+                        </tr>
+                        <tr>
+                            <td>节假日加班时长</td>
+                            <td class="amount">{{ salary.attendance_detail.holiday_overtime_hours|floatformat:2 }} 小时</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 异常统计 -->
+            <div style="margin-bottom: 20px;">
+                <h4 style="color: #2c3e50; margin-bottom: 10px; font-size: 16px;">异常统计</h4>
+                <table class="salary-table">
+                    <tbody>
+                        <tr>
+                            <td>迟到分钟数</td>
+                            <td class="amount negative">{{ salary.attendance_detail.late_minutes }} 分钟</td>
+                        </tr>
+                        <tr>
+                            <td>早退分钟数</td>
+                            <td class="amount negative">{{ salary.attendance_detail.early_leave_minutes }} 分钟</td>
+                        </tr>
+                        <tr>
+                            <td>缺卡天数</td>
+                            <td class="amount negative">{{ salary.attendance_detail.missing_clock_days }} 天</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
         
         <!-- 实发工资 -->
         <div class="net-salary">

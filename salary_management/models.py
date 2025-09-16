@@ -187,6 +187,158 @@ class MonthlySalary(models.Model):
         super().save(*args, **kwargs)
 
 
+class AttendanceCalculationRule(models.Model):
+    """考勤计算规则配置表"""
+    rule_name = models.CharField(max_length=100, verbose_name='规则名称')
+    description = models.TextField(blank=True, verbose_name='规则描述')
+    
+    # 正常工作时间配置
+    standard_work_hours_per_day = models.DecimalField(
+        max_digits=4, decimal_places=2, default=8,
+        verbose_name='标准工作时长(小时/天)'
+    )
+    standard_work_days_per_month = models.IntegerField(
+        default=22, verbose_name='标准工作天数(天/月)'
+    )
+    
+    # 请假扣款规则
+    personal_leave_deduction_rate = models.DecimalField(
+        max_digits=5, decimal_places=4, default=1.0,
+        verbose_name='事假扣款比例(1.0=全扣)'
+    )
+    sick_leave_deduction_rate = models.DecimalField(
+        max_digits=5, decimal_places=4, default=0.5,
+        verbose_name='病假扣款比例'
+    )
+    annual_leave_deduction_rate = models.DecimalField(
+        max_digits=5, decimal_places=4, default=0.0,
+        verbose_name='年假扣款比例'
+    )
+    
+    # 加班工资倍率
+    weekday_overtime_rate = models.DecimalField(
+        max_digits=4, decimal_places=2, default=1.5,
+        verbose_name='工作日加班倍率'
+    )
+    weekend_overtime_rate = models.DecimalField(
+        max_digits=4, decimal_places=2, default=2.0,
+        verbose_name='周末加班倍率'
+    )
+    holiday_overtime_rate = models.DecimalField(
+        max_digits=4, decimal_places=2, default=3.0,
+        verbose_name='节假日加班倍率'
+    )
+    
+    # 迟到早退扣款
+    late_deduction_per_minute = models.DecimalField(
+        max_digits=6, decimal_places=2, default=5.0,
+        verbose_name='迟到扣款(元/分钟)'
+    )
+    early_leave_deduction_per_minute = models.DecimalField(
+        max_digits=6, decimal_places=2, default=5.0,
+        verbose_name='早退扣款(元/分钟)'
+    )
+    
+    is_active = models.BooleanField(default=True, verbose_name='是否启用')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 't_attendance_calculation_rule'
+        verbose_name = '考勤计算规则'
+        verbose_name_plural = '考勤计算规则'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return self.rule_name
+
+
+class AttendanceSalaryDetail(models.Model):
+    """考勤薪资明细表"""
+    monthly_salary = models.OneToOneField(
+        MonthlySalary, on_delete=models.CASCADE,
+        verbose_name='月度工资记录', related_name='attendance_detail'
+    )
+    calculation_rule = models.ForeignKey(
+        AttendanceCalculationRule, on_delete=models.CASCADE,
+        verbose_name='计算规则'
+    )
+    
+    # 出勤统计
+    actual_work_days = models.IntegerField(default=0, verbose_name='实际工作天数')
+    actual_work_hours = models.DecimalField(
+        max_digits=6, decimal_places=2, default=0,
+        verbose_name='实际工作时长'
+    )
+    
+    # 请假统计
+    personal_leave_hours = models.DecimalField(
+        max_digits=6, decimal_places=2, default=0,
+        verbose_name='事假时长(小时)'
+    )
+    sick_leave_hours = models.DecimalField(
+        max_digits=6, decimal_places=2, default=0,
+        verbose_name='病假时长(小时)'
+    )
+    annual_leave_hours = models.DecimalField(
+        max_digits=6, decimal_places=2, default=0,
+        verbose_name='年假时长(小时)'
+    )
+    other_leave_hours = models.DecimalField(
+        max_digits=6, decimal_places=2, default=0,
+        verbose_name='其他假期时长(小时)'
+    )
+    
+    # 加班统计
+    weekday_overtime_hours = models.DecimalField(
+        max_digits=6, decimal_places=2, default=0,
+        verbose_name='工作日加班时长(小时)'
+    )
+    weekend_overtime_hours = models.DecimalField(
+        max_digits=6, decimal_places=2, default=0,
+        verbose_name='周末加班时长(小时)'
+    )
+    holiday_overtime_hours = models.DecimalField(
+        max_digits=6, decimal_places=2, default=0,
+        verbose_name='节假日加班时长(小时)'
+    )
+    
+    # 异常统计
+    late_minutes = models.IntegerField(default=0, verbose_name='迟到分钟数')
+    early_leave_minutes = models.IntegerField(default=0, verbose_name='早退分钟数')
+    missing_clock_days = models.IntegerField(default=0, verbose_name='缺卡天数')
+    
+    # 计算结果
+    normal_work_pay = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        verbose_name='正常出勤工资'
+    )
+    leave_deduction = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        verbose_name='请假扣款'
+    )
+    overtime_pay = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        verbose_name='加班工资'
+    )
+    late_early_deduction = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        verbose_name='迟到早退扣款'
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    
+    class Meta:
+        db_table = 't_attendance_salary_detail'
+        verbose_name = '考勤薪资明细'
+        verbose_name_plural = '考勤薪资明细'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.monthly_salary.employee.name} - {self.monthly_salary.salary_month.strftime('%Y-%m')}"
+
+
 class SalaryAdjustment(models.Model):
     """工资调整记录表"""
     ADJUSTMENT_TYPES = [

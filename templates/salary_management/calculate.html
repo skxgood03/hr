@@ -39,25 +39,45 @@
                                 <div class="form-text">选择要计算工资的月份</div>
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">计算范围</label>
+                                <label class="form-label">考勤计算</label>
                                 <div>
                                     <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="calculate_type" 
-                                               id="calculate_all" value="all" checked>
-                                        <label class="form-check-label" for="calculate_all">
-                                            计算所有员工
+                                        <input class="form-check-input" type="checkbox" name="include_attendance" 
+                                               id="include_attendance" value="1" checked>
+                                        <label class="form-check-label" for="include_attendance">
+                                            包含考勤数据计算
                                         </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="calculate_type" 
-                                               id="calculate_selected" value="selected">
-                                        <label class="form-check-label" for="calculate_selected">
-                                            计算选定员工
-                                        </label>
+                                        <div class="form-text">基于打卡、请假、加班记录调整薪资</div>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-4 mb-3">
+                                <label class="form-label">计算模式</label>
+                                <div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="batch_mode" 
+                                               name="batch_mode" value="1" checked>
+                                        <label class="form-check-label" for="batch_mode">
+                                            批量计算模式
+                                        </label>
+                                        <div class="form-text">启用后可同时计算多名员工</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 考勤薪资计算规则设置 -->
+                        <div class="row" id="attendanceRulesSection" style="display: none;">
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <h6 class="alert-heading">考勤薪资计算说明</h6>
+                                    <p class="mb-0">考勤薪资计算将基于员工的打卡记录、请假记录和加班记录，按照预设的计算规则自动计算出勤工资、请假扣款和加班费用。</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
                                 <label class="form-label">计算选项</label>
                                 <div>
                                     <div class="form-check">
@@ -76,6 +96,25 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">员工范围</label>
+                                <div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="calculate_type" 
+                                               id="calculate_all_employees" value="all" checked>
+                                        <label class="form-check-label" for="calculate_all_employees">
+                                            所有在职员工
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="calculate_type" 
+                                               id="calculate_selected_employees" value="selected">
+                                        <label class="form-check-label" for="calculate_selected_employees">
+                                            指定员工
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         
                         <div class="row">
@@ -89,6 +128,108 @@
                             </div>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 薪资计算公式说明 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header" data-bs-toggle="collapse" data-bs-target="#formulaCollapse" 
+                     aria-expanded="false" aria-controls="formulaCollapse" style="cursor: pointer;">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calculator me-2"></i>薪资计算公式说明
+                        <i class="fas fa-chevron-down float-end"></i>
+                    </h5>
+                </div>
+                <div class="collapse" id="formulaCollapse">
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- 基础薪资计算 -->
+                            <div class="col-md-6 mb-4">
+                                <h6 class="text-primary"><i class="fas fa-coins me-1"></i>基础薪资计算</h6>
+                                <div class="formula-box">
+                                    <div class="formula-item">
+                                        <strong>应发工资 =</strong> 基本工资 + 绩效工资 + 津贴补助 + 奖金 + 加班费
+                                    </div>
+                                    <div class="formula-item mt-2">
+                                        <strong>实发工资 =</strong> 应发工资 - 社会保险 - 住房公积金 - 个人所得税 - 其他扣款
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 考勤相关计算 -->
+                            <div class="col-md-6 mb-4">
+                                <h6 class="text-success"><i class="fas fa-clock me-1"></i>考勤相关计算</h6>
+                                <div class="formula-box">
+                                    <div class="formula-item">
+                                        <strong>小时工资 =</strong> 基本工资 ÷ 标准工作小时数
+                                    </div>
+                                    <div class="formula-item mt-2">
+                                        <strong>加班费 =</strong> 小时工资 × 加班小时数 × 加班倍率
+                                    </div>
+                                    <div class="formula-item mt-2">
+                                        <strong>请假扣款 =</strong> 小时工资 × 请假小时数
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <!-- 社保公积金计算 -->
+                            <div class="col-md-6 mb-4">
+                                <h6 class="text-info"><i class="fas fa-shield-alt me-1"></i>社保公积金计算</h6>
+                                <div class="formula-box">
+                                    <div class="formula-item">
+                                        <strong>社会保险 =</strong> 基本工资 × 社保费率
+                                        <div class="text-muted small mt-1">
+                                            • 养老保险：8%<br>
+                                            • 医疗保险：2%<br>
+                                            • 失业保险：0.5%
+                                        </div>
+                                    </div>
+                                    <div class="formula-item mt-2">
+                                        <strong>住房公积金 =</strong> 基本工资 × 公积金费率（默认12%）
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 个人所得税计算 -->
+                            <div class="col-md-6 mb-4">
+                                <h6 class="text-warning"><i class="fas fa-percentage me-1"></i>个人所得税计算</h6>
+                                <div class="formula-box">
+                                    <div class="formula-item">
+                                        <strong>应纳税所得额 =</strong> 应发工资 - 社保 - 公积金 - 5000（起征点）
+                                    </div>
+                                    <div class="formula-item mt-2">
+                                        <strong>税率表：</strong>
+                                        <div class="text-muted small mt-1">
+                                            • 0-3000元：3%<br>
+                                            • 3000-12000元：10%<br>
+                                            • 12000-25000元：20%<br>
+                                            • 25000-35000元：25%<br>
+                                            • 35000-55000元：30%<br>
+                                            • 55000-80000元：35%<br>
+                                            • 80000元以上：45%
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>说明：</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>启用考勤计算时，系统会根据员工的打卡、请假、加班记录自动调整薪资</li>
+                                <li>社保费率和公积金费率可在员工薪资配置中单独设置</li>
+                                <li>个人所得税按照2023年最新税率表计算</li>
+                                <li>加班倍率：工作日1.5倍，休息日2倍，法定节假日3倍</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -234,9 +375,92 @@
 </div>
 {% endblock %}
 
+{% block extra_css %}
+<style>
+    .employee-card {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .employee-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .employee-card.selected {
+        border-color: #007bff;
+        background-color: #f8f9ff;
+    }
+    .progress {
+        height: 25px;
+    }
+    .result-item {
+        border-left: 4px solid #28a745;
+        padding-left: 15px;
+        margin-bottom: 10px;
+    }
+    .result-item.error {
+        border-left-color: #dc3545;
+    }
+    .calculation-summary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    /* 公式展示样式 */
+    .formula-box {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 10px;
+    }
+    .formula-item {
+        font-family: 'Courier New', monospace;
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 10px;
+        margin-bottom: 8px;
+    }
+    .formula-item:last-child {
+        margin-bottom: 0;
+    }
+    .card-header[data-bs-toggle="collapse"] {
+        transition: all 0.3s ease;
+    }
+    .card-header[data-bs-toggle="collapse"]:hover {
+        background-color: #f8f9fa;
+    }
+    .card-header .fas.fa-chevron-down {
+        transition: transform 0.3s ease;
+    }
+    .card-header[aria-expanded="true"] .fas.fa-chevron-down {
+        transform: rotate(180deg);
+    }
+</style>
+{% endblock %}
+
 {% block extra_js %}
 <script>
 $(document).ready(function() {
+    // 监听考勤计算选项变化
+    $('#include_attendance').change(function() {
+        if ($(this).is(':checked')) {
+            $('#attendanceRulesSection').show();
+        } else {
+            $('#attendanceRulesSection').hide();
+        }
+    });
+    
+    // 初始化显示状态
+    if ($('#include_attendance').is(':checked')) {
+        $('#attendanceRulesSection').show();
+    } else {
+        $('#attendanceRulesSection').hide();
+    }
+    
     // 监听计算类型变化
     $('input[name="calculate_type"]').change(function() {
         if ($(this).val() === 'selected') {
@@ -245,6 +469,13 @@ $(document).ready(function() {
             $('#employeeSelection').hide();
         }
     });
+    
+    // 初始化员工选择区域显示状态
+    if ($('input[name="calculate_type"]:checked').val() === 'selected') {
+        $('#employeeSelection').show();
+    } else {
+        $('#employeeSelection').hide();
+    }
     
     // 表单提交处理
     $('#calculateForm').submit(function(e) {
@@ -278,8 +509,9 @@ $(document).ready(function() {
             'calculate_type': calculateType,
             'overwrite_existing': $('#overwrite_existing').is(':checked') ? '1' : '',
             'auto_confirm': $('#auto_confirm').is(':checked') ? '1' : '',
+            'include_attendance': $('#include_attendance').is(':checked') ? '1' : '',
             'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
-        };
+        }
         
         // 如果选择指定员工，添加employee_ids列表
         if (calculateType === 'selected') {

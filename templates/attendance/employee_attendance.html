@@ -310,7 +310,7 @@ function searchRecords(page = 1) {
     };
     
     // 显示加载提示
-    $('#loadingModal').modal('show');
+    {#$('#loadingModal').modal('show');#}
     
     $.get('/attendance/api/records/', formData, function(response) {
         $('#loadingModal').modal('hide');

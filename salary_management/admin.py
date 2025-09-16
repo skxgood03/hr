@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import SalaryGrade, EmployeeSalaryConfig, MonthlySalary, SalaryAdjustment
+from .models import SalaryGrade, EmployeeSalaryConfig, MonthlySalary, SalaryAdjustment, AttendanceCalculationRule, AttendanceSalaryDetail
 
 
 @admin.register(SalaryGrade)
@@ -118,3 +118,79 @@ class SalaryAdjustmentAdmin(admin.ModelAdmin):
             if not obj.approver:
                 obj.approver = request.user
         super().save_model(request, obj, form, change)
+
+
+@admin.register(AttendanceCalculationRule)
+class AttendanceCalculationRuleAdmin(admin.ModelAdmin):
+    list_display = ('rule_name', 'is_active', 'created_at')
+    list_filter = ('is_active', 'created_at')
+    search_fields = ('rule_name', 'description')
+    ordering = ('rule_name',)
+    readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        ('基本信息', {
+            'fields': ('rule_name', 'description', 'is_active')
+        }),
+        ('工作时间设置', {
+            'fields': ('standard_work_hours_per_day', 'standard_work_days_per_month')
+        }),
+        ('加班费率', {
+            'fields': ('weekday_overtime_rate', 'weekend_overtime_rate', 'holiday_overtime_rate')
+        }),
+        ('扣款设置', {
+            'fields': ('late_deduction_per_minute', 'early_leave_deduction_per_minute')
+        }),
+        ('请假设置', {
+            'fields': ('personal_leave_deduction_rate', 'sick_leave_deduction_rate')
+        }),
+        ('时间戳', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(AttendanceSalaryDetail)
+class AttendanceSalaryDetailAdmin(admin.ModelAdmin):
+    list_display = ('get_employee_name', 'get_salary_month', 'actual_work_days', 'normal_work_pay', 'overtime_pay', 'leave_deduction', 'created_at')
+    list_filter = ('created_at', 'monthly_salary__salary_month')
+    search_fields = ('monthly_salary__employee__name',)
+    ordering = ('-created_at',)
+    readonly_fields = ('created_at', 'updated_at')
+    
+    def get_employee_name(self, obj):
+        return obj.monthly_salary.employee.name
+    get_employee_name.short_description = '员工姓名'
+    
+    def get_salary_month(self, obj):
+        return obj.monthly_salary.salary_month.strftime('%Y-%m')
+    get_salary_month.short_description = '工资月份'
+    
+    fieldsets = (
+        ('关联信息', {
+            'fields': ('monthly_salary', 'calculation_rule')
+        }),
+        ('出勤统计', {
+            'fields': ('actual_work_days', 'actual_work_hours')
+        }),
+        ('请假统计', {
+            'fields': ('personal_leave_hours', 'sick_leave_hours', 'annual_leave_hours', 'other_leave_hours')
+        }),
+        ('加班统计', {
+            'fields': ('weekday_overtime_hours', 'weekend_overtime_hours', 'holiday_overtime_hours')
+        }),
+        ('异常统计', {
+            'fields': ('late_minutes', 'early_leave_minutes', 'missing_clock_days')
+        }),
+        ('计算结果', {
+            'fields': ('normal_work_pay', 'leave_deduction', 'overtime_pay', 'late_early_deduction')
+        }),
+        ('时间戳', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('monthly_salary__employee', 'calculation_rule')

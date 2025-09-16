@@ -1,0 +1,466 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/select2.min.css' %}" rel="stylesheet">
+<style>
+.calculation-form {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 30px;
+    margin-bottom: 30px;
+}
+
+.form-section {
+    margin-bottom: 25px;
+}
+
+.form-section h5 {
+    color: #333;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #007bff;
+}
+
+.employee-selection {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    background: #f8f9fa;
+}
+
+.employee-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.employee-item:last-child {
+    border-bottom: none;
+}
+
+.employee-info {
+    margin-left: 10px;
+}
+
+.employee-name {
+    font-weight: 500;
+    color: #333;
+}
+
+.employee-dept {
+    font-size: 12px;
+    color: #666;
+}
+
+.calculation-preview {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+    display: none;
+}
+
+.preview-table {
+    font-size: 14px;
+}
+
+.preview-table th {
+    background: #007bff;
+    color: white;
+    font-weight: 500;
+    text-align: center;
+}
+
+.preview-table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.amount-positive {
+    color: #28a745;
+    font-weight: 500;
+}
+
+.amount-negative {
+    color: #dc3545;
+    font-weight: 500;
+}
+
+.summary-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.summary-item {
+    text-align: center;
+}
+
+.summary-value {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.summary-label {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.btn-calculate {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 12px 30px;
+    font-size: 16px;
+    font-weight: 500;
+    border-radius: 25px;
+    transition: all 0.3s ease;
+}
+
+.btn-calculate:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.loading-spinner {
+    display: none;
+    text-align: center;
+    padding: 20px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-header">
+                <h2><i class="fas fa-calculator"></i> {{ title }}</h2>
+                <p class="text-muted">根据考勤数据计算员工薪资，包括正常出勤工资、请假扣款和加班工资</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="calculation-form">
+                <form id="calculationForm" method="post">
+                    {% csrf_token %}
+                    
+                    <!-- 基本设置 -->
+                    <div class="form-section">
+                        <h5><i class="fas fa-cog"></i> 基本设置</h5>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="salary_month">工资月份 <span class="text-danger">*</span></label>
+                                    <input type="month" class="form-control" id="salary_month" name="salary_month" 
+                                           value="{{ current_month }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="department_filter">部门筛选</label>
+                                    <select class="form-control" id="department_filter">
+                                        <option value="">全部部门</option>
+                                        {% for dept in departments %}
+                                        <option value="{{ dept.id }}">{{ dept.departmentName }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="employee_search">员工搜索</label>
+                                    <input type="text" class="form-control" id="employee_search" 
+                                           placeholder="输入员工姓名或工号搜索">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 员工选择 -->
+                    <div class="form-section">
+                        <h5><i class="fas fa-users"></i> 员工选择</h5>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="select_all">
+                                    <label class="form-check-label" for="select_all">
+                                        <strong>全选/取消全选</strong>
+                                    </label>
+                                </div>
+                                
+                                <div class="employee-selection" id="employee_list">
+                                    {% for employee in employees %}
+                                    <div class="employee-item" data-department="{{ employee.station.department.id|default:'' }}">
+                                        <input class="form-check-input employee-checkbox" type="checkbox" 
+                                               name="employee_ids" value="{{ employee.id }}" 
+                                               id="emp_{{ employee.id }}">
+                                        <div class="employee-info">
+                                            <div class="employee-name">{{ employee.name }} ({{ employee.employeeId }})</div>
+                                            <div class="employee-dept">
+                                                {% if employee.station and employee.station.department %}
+                                                    {{ employee.station.department.departmentName }} - {{ employee.station.stationName }}
+                                                {% else %}
+                                                    未分配部门
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div class="form-section">
+                        <div class="row">
+                            <div class="col-md-12 text-center">
+                                <button type="button" class="btn btn-info mr-3" id="btn_preview">
+                                    <i class="fas fa-eye"></i> 预览计算结果
+                                </button>
+                                <button type="submit" class="btn btn-calculate">
+                                    <i class="fas fa-calculator"></i> 开始计算
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 预览结果 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="calculation-preview" id="preview_section">
+                <h5><i class="fas fa-chart-bar"></i> 计算预览</h5>
+                
+                <!-- 汇总信息 -->
+                <div class="summary-card" id="summary_info" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-3 summary-item">
+                            <div class="summary-value" id="total_employees">0</div>
+                            <div class="summary-label">总员工数</div>
+                        </div>
+                        <div class="col-md-3 summary-item">
+                            <div class="summary-value" id="total_attendance_salary">¥0</div>
+                            <div class="summary-label">出勤工资总额</div>
+                        </div>
+                        <div class="col-md-3 summary-item">
+                            <div class="summary-value" id="total_overtime_salary">¥0</div>
+                            <div class="summary-label">加班工资总额</div>
+                        </div>
+                        <div class="col-md-3 summary-item">
+                            <div class="summary-value" id="total_deduction">¥0</div>
+                            <div class="summary-label">扣款总额</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 详细列表 -->
+                <div class="table-responsive">
+                    <table class="table table-striped preview-table" id="preview_table">
+                        <thead>
+                            <tr>
+                                <th>员工姓名</th>
+                                <th>部门</th>
+                                <th>出勤工资</th>
+                                <th>加班工资</th>
+                                <th>扣款金额</th>
+                                <th>应发工资</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="preview_tbody">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="loading-spinner" id="loading_spinner">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">正在计算中，请稍候...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/select2.min.js' %}"></script>
+<script>
+$(document).ready(function() {
+    // 全选/取消全选
+    $('#select_all').change(function() {
+        $('.employee-checkbox:visible').prop('checked', this.checked);
+    });
+
+    // 部门筛选
+    $('#department_filter').change(function() {
+        var selectedDept = $(this).val();
+        $('.employee-item').each(function() {
+            var empDept = $(this).data('department');
+            if (selectedDept === '' || empDept == selectedDept) {
+                $(this).show();
+            } else {
+                $(this).hide();
+                $(this).find('.employee-checkbox').prop('checked', false);
+            }
+        });
+        updateSelectAllState();
+    });
+
+    // 员工搜索
+    $('#employee_search').on('input', function() {
+        var searchTerm = $(this).val().toLowerCase();
+        $('.employee-item').each(function() {
+            var employeeName = $(this).find('.employee-name').text().toLowerCase();
+            if (employeeName.includes(searchTerm)) {
+                $(this).show();
+            } else {
+                $(this).hide();
+                $(this).find('.employee-checkbox').prop('checked', false);
+            }
+        });
+        updateSelectAllState();
+    });
+
+    // 更新全选状态
+    function updateSelectAllState() {
+        var visibleCheckboxes = $('.employee-checkbox:visible');
+        var checkedCheckboxes = $('.employee-checkbox:visible:checked');
+        $('#select_all').prop('checked', visibleCheckboxes.length > 0 && visibleCheckboxes.length === checkedCheckboxes.length);
+    }
+
+    $('.employee-checkbox').change(updateSelectAllState);
+
+    // 预览计算结果
+    $('#btn_preview').click(function() {
+        var selectedEmployees = [];
+        $('.employee-checkbox:checked').each(function() {
+            selectedEmployees.push($(this).val());
+        });
+
+        var salaryMonth = $('#salary_month').val();
+        if (!salaryMonth) {
+            alert('请选择工资月份');
+            return;
+        }
+
+        if (selectedEmployees.length === 0) {
+            if (!confirm('未选择任何员工，将计算所有在职员工的薪资，是否继续？')) {
+                return;
+            }
+        }
+
+        // 显示加载状态
+        $('#preview_section').show();
+        $('#loading_spinner').show();
+        $('#preview_table').hide();
+        $('#summary_info').hide();
+
+        // 发送预览请求
+        $.ajax({
+            url: '{% url "salary_management:api_preview_attendance_calculation" %}',
+            method: 'POST',
+            data: {
+                'salary_month': salaryMonth,
+                'employee_ids': selectedEmployees,
+                'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    displayPreviewResults(response.data);
+                } else {
+                    alert('预览失败：' + response.error);
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = '预览失败';
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMsg += '：' + xhr.responseJSON.error;
+                }
+                alert(errorMsg);
+            },
+            complete: function() {
+                $('#loading_spinner').hide();
+            }
+        });
+    });
+
+    // 显示预览结果
+    function displayPreviewResults(data) {
+        // 更新汇总信息
+        $('#total_employees').text(data.summary.total_employees);
+        $('#total_attendance_salary').text('¥' + data.summary.total_attendance_salary.toFixed(2));
+        $('#total_overtime_salary').text('¥' + data.summary.total_overtime_salary.toFixed(2));
+        $('#total_deduction').text('¥' + data.summary.total_deduction.toFixed(2));
+        $('#summary_info').show();
+
+        // 更新详细列表
+        var tbody = $('#preview_tbody');
+        tbody.empty();
+
+        data.preview_list.forEach(function(item) {
+            var row = '<tr>';
+            row += '<td>' + item.employee_name + '</td>';
+            row += '<td>' + item.department + '</td>';
+            
+            if (item.error) {
+                row += '<td colspan="5" class="text-danger">错误：' + item.error + '</td>';
+            } else {
+                row += '<td class="amount-positive">¥' + item.attendance_salary.toFixed(2) + '</td>';
+                row += '<td class="amount-positive">¥' + item.overtime_salary.toFixed(2) + '</td>';
+                row += '<td class="amount-negative">¥' + item.deduction_amount.toFixed(2) + '</td>';
+                row += '<td><strong>¥' + item.final_salary.toFixed(2) + '</strong></td>';
+                row += '<td><span class="badge badge-' + (item.status === '已计算' ? 'success' : 'warning') + '">' + item.status + '</span></td>';
+            }
+            
+            row += '</tr>';
+            tbody.append(row);
+        });
+
+        $('#preview_table').show();
+    }
+
+    // 表单提交
+    $('#calculationForm').submit(function(e) {
+        var selectedEmployees = $('.employee-checkbox:checked').length;
+        var salaryMonth = $('#salary_month').val();
+        
+        if (!salaryMonth) {
+            e.preventDefault();
+            alert('请选择工资月份');
+            return;
+        }
+
+        if (selectedEmployees === 0) {
+            if (!confirm('未选择任何员工，将计算所有在职员工的薪资，是否继续？')) {
+                e.preventDefault();
+                return;
+            }
+        } else {
+            if (!confirm('确定要计算选中的 ' + selectedEmployees + ' 名员工的考勤薪资吗？')) {
+                e.preventDefault();
+                return;
+            }
+        }
+
+        // 显示加载状态
+        $(this).find('button[type=submit]').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> 计算中...');
+    });
+});
+</script>
+{% endblock %}

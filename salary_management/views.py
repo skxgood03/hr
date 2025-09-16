@@ -9,9 +9,15 @@ from datetime import datetime, date
 import json
 from decimal import Decimal
 
-from .models import SalaryGrade, EmployeeSalaryConfig, MonthlySalary, SalaryAdjustment
+from .models import (
+    SalaryGrade, EmployeeSalaryConfig, MonthlySalary, SalaryAdjustment,
+    AttendanceCalculationRule, AttendanceSalaryDetail
+)
 from hr.decorators import admin_required
-from .services import SalaryCalculationService, SalaryReportService, SalaryAdjustmentService
+from .services import (
+    SalaryCalculationService, SalaryReportService, SalaryAdjustmentService,
+    AttendanceSalaryCalculationService
+)
 from personal.models import Personal
 from department.models import Department
 
@@ -331,14 +337,120 @@ def api_get_housing_fund_rate(request, employee_id):
 @admin_required
 def salary_calculate_page(request):
     """薪资计算页面"""
+    if request.method == 'POST':
+        return handle_salary_calculation(request)
+    
     employees = Personal.objects.filter(workStatus=1).select_related('station__department')  # 假设workStatus=1表示在职
+    departments = Department.objects.all()
     
     context = {
         'employees': employees,
+        'departments': departments,
         'title': '薪资计算',
         'current_month': '2025-10'  # 设置为2025年10月，确保能找到有效的薪资配置
     }
     return render(request, 'salary_management/calculate.html', context)
+
+
+def handle_salary_calculation(request):
+    """处理薪资计算请求（整合考勤数据）"""
+    try:
+        salary_month = request.POST.get('salary_month')
+        calculate_type = request.POST.get('calculate_type', 'all')
+        overwrite_existing = request.POST.get('overwrite_existing') == '1'
+        auto_confirm = request.POST.get('auto_confirm') == '1'
+        include_attendance = request.POST.get('include_attendance', '1') == '1'  # 默认包含考勤
+        
+        # 解析月份
+        try:
+            month_date = datetime.strptime(salary_month, '%Y-%m').date().replace(day=1)
+        except ValueError:
+            return JsonResponse({
+                'success': False,
+                'message': '无效的月份格式'
+            })
+        
+        # 获取要计算的员工
+        if calculate_type == 'selected':
+            employee_ids = request.POST.getlist('employee_ids')
+            if not employee_ids:
+                return JsonResponse({
+                    'success': False,
+                    'message': '请选择要计算的员工'
+                })
+            employees = Personal.objects.filter(id__in=employee_ids, workStatus=1)
+        else:
+            employees = Personal.objects.filter(workStatus=1)
+        
+        # 统一薪资计算（包含考勤数据）
+        success_count = 0
+        error_count = 0
+        total_gross = 0
+        total_net = 0
+        errors = []
+        
+        for employee in employees:
+            try:
+                # 检查是否已存在记录
+                existing_record = MonthlySalary.objects.filter(
+                    employee=employee,
+                    salary_month=month_date
+                ).first()
+                
+                if existing_record and not overwrite_existing:
+                    continue
+                
+                # 计算薪资（包含考勤数据）
+                result = SalaryCalculationService.calculate_monthly_salary(
+                    employee.id, month_date, include_attendance=include_attendance
+                )
+                
+                if result['success']:
+                    salary_data = result['data']
+                    
+                    if existing_record:
+                        # 更新现有记录
+                        for key, value in salary_data.items():
+                            setattr(existing_record, key, value)
+                        if auto_confirm:
+                            existing_record.status = 'confirmed'
+                        existing_record.save()
+                    else:
+                        # 创建新记录
+                        salary_data['employee'] = employee
+                        salary_data['salary_month'] = month_date
+                        if auto_confirm:
+                            salary_data['status'] = 'confirmed'
+                        MonthlySalary.objects.create(**salary_data)
+                    
+                    success_count += 1
+                    total_gross += salary_data['gross_salary']
+                    total_net += salary_data['net_salary']
+                else:
+                    error_count += 1
+                    errors.append(f"{employee.name}: {result['message']}")
+                    
+            except Exception as e:
+                error_count += 1
+                errors.append(f"{employee.name}: {str(e)}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': '薪资计算完成',
+            'data': {
+                'success_count': success_count,
+                'error_count': error_count,
+                'total_gross': float(total_gross),
+                'total_net': float(total_net),
+                'errors': errors
+            }
+        })
+            
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'计算过程中发生错误: {str(e)}'
+        })
 
 
 @csrf_exempt
@@ -1164,3 +1276,342 @@ def api_salary_statistics(request):
             'success': False,
             'error': str(e)
         }, status=400)
+
+
+# 考勤薪资计算相关视图
+@admin_required
+def attendance_salary_calculate(request):
+    """考勤薪资计算页面"""
+    if request.method == 'POST':
+        salary_month = request.POST.get('salary_month')
+        employee_ids = request.POST.getlist('employee_ids')
+        
+        try:
+            month_date = datetime.strptime(salary_month, '%Y-%m').date().replace(day=1)
+            
+            if employee_ids:
+                # 计算指定员工的考勤薪资
+                results, errors = AttendanceSalaryCalculationService.batch_calculate_attendance_salary(
+                    month_date, [int(id) for id in employee_ids]
+                )
+            else:
+                # 计算所有员工的考勤薪资
+                results, errors = AttendanceSalaryCalculationService.batch_calculate_attendance_salary(month_date)
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'results_count': len(results),
+                    'errors_count': len(errors),
+                    'errors': errors
+                })
+            else:
+                if results:
+                    messages.success(request, f'成功计算 {len(results)} 名员工的考勤薪资')
+                
+                if errors:
+                    for error in errors:
+                        messages.error(request, error)
+                
+                return redirect('salary_management:attendance_salary_list')
+            
+        except ValueError as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'error': str(e)
+                }, status=400)
+            else:
+                messages.error(request, f'日期格式错误：{str(e)}')
+                return redirect('salary_management:attendance_salary_list')
+        except Exception as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'error': str(e)
+                }, status=500)
+            else:
+                messages.error(request, f'计算失败：{str(e)}')
+                return redirect('salary_management:attendance_salary_list')
+    
+    # GET请求，显示计算页面
+    employees = Personal.objects.filter(workStatus=1).select_related('station__department')
+    departments = Department.objects.all()
+    
+    context = {
+        'employees': employees,
+        'departments': departments,
+        'current_month': date.today().strftime('%Y-%m'),
+        'title': '考勤薪资计算'
+    }
+    return render(request, 'salary_management/attendance_calculate.html', context)
+
+
+def attendance_salary_list(request):
+    """考勤薪资记录列表"""
+    salary_month = request.GET.get('month', date.today().strftime('%Y-%m'))
+    search = request.GET.get('search', '')
+    department_id = request.GET.get('department', '')
+    
+    try:
+        month_date = datetime.strptime(salary_month, '%Y-%m').date().replace(day=1)
+    except ValueError:
+        month_date = date.today().replace(day=1)
+    
+    details = AttendanceSalaryDetail.objects.select_related(
+        'employee', 'employee__station', 'employee__station__department'
+    ).filter(salary_month=month_date)
+    
+    if search:
+        details = details.filter(
+            Q(employee__name__icontains=search) |
+            Q(employee__employeeId__icontains=search)
+        )
+    
+    if department_id:
+        details = details.filter(employee__station__department_id=department_id)
+    
+    # 分页
+    paginator = Paginator(details, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # 统计数据
+    stats = details.aggregate(
+        total_count=Count('id'),
+        total_attendance_salary=Sum('attendance_salary'),
+        total_overtime_salary=Sum('overtime_salary'),
+        total_deduction=Sum('deduction_amount'),
+        total_final_salary=Sum('final_salary')
+    )
+    
+    departments = Department.objects.all()
+    
+    context = {
+        'page_obj': page_obj,
+        'departments': departments,
+        'salary_month': salary_month,
+        'search': search,
+        'selected_department': department_id,
+        'statistics': stats,
+        'title': '考勤薪资记录'
+    }
+    
+    return render(request, 'salary_management/attendance_salary_list.html', context)
+
+
+@admin_required
+def attendance_calculation_rules(request):
+    """考勤计算规则管理"""
+    rules = AttendanceCalculationRule.objects.all().order_by('-created_at')
+    
+    context = {
+        'rules': rules,
+        'title': '考勤计算规则'
+    }
+    
+    return render(request, 'salary_management/attendance_rules.html', context)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_create_attendance_rule(request):
+    """API: 创建考勤计算规则"""
+    try:
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+        else:
+            data = request.POST.dict()
+        
+        rule = AttendanceCalculationRule.objects.create(
+            rule_name=data.get('rule_name'),
+            base_working_hours=Decimal(str(data.get('base_working_hours', '8'))),
+            overtime_rate=Decimal(str(data.get('overtime_rate', '1.5'))),
+            weekend_rate=Decimal(str(data.get('weekend_rate', '2.0'))),
+            holiday_rate=Decimal(str(data.get('holiday_rate', '3.0'))),
+            late_deduction_rate=Decimal(str(data.get('late_deduction_rate', '0.01'))),
+            absence_deduction_rate=Decimal(str(data.get('absence_deduction_rate', '0.1'))),
+            is_active=data.get('is_active', True)
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': '考勤计算规则创建成功',
+            'data': {
+                'rule_id': rule.id,
+                'rule_name': rule.rule_name
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_preview_attendance_calculation(request):
+    """API: 预览考勤薪资计算结果"""
+    try:
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+        else:
+            data = request.POST.dict()
+        
+        salary_month = data.get('salary_month')
+        employee_ids = data.get('employee_ids', [])
+        
+        if not salary_month:
+            return JsonResponse({
+                'success': False,
+                'error': '请选择工资月份'
+            }, status=400)
+        
+        month_date = datetime.strptime(salary_month, '%Y-%m').date().replace(day=1)
+        
+        # 获取要计算的员工列表
+        if employee_ids:
+            employees = Personal.objects.filter(id__in=employee_ids, workStatus=1)
+        else:
+            employees = Personal.objects.filter(workStatus=1)
+        
+        preview_data = []
+        total_attendance_salary = Decimal('0')
+        total_overtime_salary = Decimal('0')
+        total_deduction = Decimal('0')
+        error_count = 0
+        
+        for employee in employees:
+            try:
+                # 检查是否已存在该月考勤薪资记录
+                existing_record = AttendanceSalaryDetail.objects.filter(
+                    employee=employee,
+                    salary_month=month_date
+                ).first()
+                
+                if existing_record:
+                    # 使用现有记录
+                    attendance_salary = existing_record.attendance_salary
+                    overtime_salary = existing_record.overtime_salary
+                    deduction_amount = existing_record.deduction_amount
+                    final_salary = existing_record.final_salary
+                    status = '已计算'
+                else:
+                    # 模拟计算（不保存到数据库）
+                    calculation_result = AttendanceSalaryCalculationService.calculate_employee_attendance_salary(
+                        employee.id, month_date, save=False
+                    )
+                    
+                    attendance_salary = calculation_result['attendance_salary']
+                    overtime_salary = calculation_result['overtime_salary']
+                    deduction_amount = calculation_result['deduction_amount']
+                    final_salary = calculation_result['final_salary']
+                    status = '待计算'
+                
+                preview_data.append({
+                    'employee_id': employee.id,
+                    'employee_name': employee.name,
+                    'department': employee.station.department.departmentName if employee.station and employee.station.department else '未分配',
+                    'attendance_salary': float(attendance_salary),
+                    'overtime_salary': float(overtime_salary),
+                    'deduction_amount': float(deduction_amount),
+                    'final_salary': float(final_salary),
+                    'status': status
+                })
+                
+                total_attendance_salary += attendance_salary
+                total_overtime_salary += overtime_salary
+                total_deduction += deduction_amount
+                
+            except Exception as e:
+                preview_data.append({
+                    'employee_id': employee.id,
+                    'employee_name': employee.name,
+                    'department': employee.station.department.departmentName if employee.station and employee.station.department else '未分配',
+                    'error': str(e)
+                })
+                error_count += 1
+        
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'preview_list': preview_data,
+                'summary': {
+                    'total_employees': len(employees),
+                    'success_count': len(employees) - error_count,
+                    'error_count': error_count,
+                    'total_attendance_salary': float(total_attendance_salary),
+                    'total_overtime_salary': float(total_overtime_salary),
+                    'total_deduction': float(total_deduction)
+                }
+            }
+        })
+        
+    except ValueError as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'日期格式错误：{str(e)}'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+def attendance_salary_detail(request, detail_id):
+    """考勤薪资详情"""
+    detail = get_object_or_404(AttendanceSalaryDetail, id=detail_id)
+    
+    context = {
+        'detail': detail,
+        'title': f'{detail.employee.name}的考勤薪资详情'
+    }
+    
+    return render(request, 'salary_management/attendance_salary_detail.html', context)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_delete_attendance_salary_record(request):
+    """删除考勤薪资记录API"""
+    try:
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+        else:
+            data = request.POST.dict()
+        record_id = data.get('record_id')
+        
+        if not record_id:
+            return JsonResponse({
+                'success': False,
+                'message': '缺少记录ID参数'
+            }, status=400)
+        
+        # 获取考勤薪资记录
+        attendance_record = get_object_or_404(AttendanceSalaryDetail, id=record_id)
+        
+        # 记录删除信息用于日志
+        employee_name = attendance_record.employee.name
+        salary_month = attendance_record.salary_month.strftime('%Y年%m月')
+        
+        # 删除记录
+        attendance_record.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'成功删除{employee_name}的{salary_month}考勤薪资记录'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': '请求数据格式错误'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'删除失败：{str(e)}'
+        }, status=500)
