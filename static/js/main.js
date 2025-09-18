@@ -1,4 +1,4 @@
-// 人力资源管理系统 - 主要JavaScript文件
+// 人事工资管理系统 - 主要JavaScript文件
 
 $(document).ready(function() {
     // 初始化工具提示

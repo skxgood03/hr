@@ -1,30 +1,54 @@
-/* 人力资源管理系统 - 自定义样式 */
+/* 人事工资管理系统 - 自定义样式 */
 
-/* 全局样式 */
+/* 企业风格全局样式 */
 body {
     font-family: 'Microsoft YaHei', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f8f9fa;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    line-height: 1.6;
+    color: #2c3e50;
+    min-height: 100vh;
 }
 
-/* 导航栏样式 */
+/* 企业风格导航栏样式 */
+.navbar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .navbar-brand {
-    font-weight: bold;
-    font-size: 1.3rem;
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: white !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .navbar-nav .nav-link {
     font-weight: 500;
+    color: rgba(255, 255, 255, 0.9) !important;
     transition: all 0.3s ease;
+    border-radius: 6px;
+    margin: 0 2px;
+    padding: 0.5rem 1rem !important;
 }
 
 .navbar-nav .nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 5px;
+    color: white !important;
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
 }
 
 .navbar-nav .nav-link.active {
     background-color: rgba(255, 255, 255, 0.2);
     border-radius: 5px;
+}
+
+.navbar-toggler {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.8%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
 }
 
 /* 面包屑导航 */
@@ -42,21 +66,39 @@ body {
     color: #0d6efd;
 }
 
-/* 卡片样式 */
+/* 企业风格卡片样式 */
 .card {
-    border: none;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    transition: box-shadow 0.15s ease-in-out;
+    border: 1px solid #f1f3f4;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    background: white;
+    overflow: hidden;
 }
 
 .card:hover {
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    border-color: #667eea;
 }
 
 .card-header {
-    background-color: #fff;
-    border-bottom: 1px solid #dee2e6;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-bottom: none;
     font-weight: 600;
+    padding: 1.2rem 1.5rem;
+    position: relative;
+}
+
+.card-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
 }
 
 /* 统计卡片 */
@@ -116,16 +158,72 @@ body {
     background-color: rgba(0, 123, 255, 0.05);
 }
 
-/* 按钮样式 */
+/* 企业风格按钮样式 */
 .btn {
-    border-radius: 6px;
-    font-weight: 500;
+    border-radius: 10px;
+    font-weight: 600;
     transition: all 0.3s ease;
+    letter-spacing: 0.02em;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
+    color: white;
+}
+
+.btn-secondary {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    color: #6c757d;
+}
+
+.btn-secondary:hover {
+    background: #e9ecef;
+    border-color: #dee2e6;
+    color: #495057;
+    transform: translateY(-1px);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border: none;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #218838 0%, #1ea085 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(40, 167, 69, 0.3);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
+    border: none;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #c82333 0%, #d91a72 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(220, 53, 69, 0.3);
 }
 
 .btn-sm {
-    padding: 0.25rem 0.75rem;
+    padding: 0.5rem 1rem;
     font-size: 0.875rem;
+    border-radius: 8px;
+}
+
+.btn:active {
+    transform: translateY(0) !important;
 }
 
 .btn-outline-primary:hover {
@@ -143,21 +241,47 @@ body {
     box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
 }
 
-/* 表单样式 */
+/* 企业风格表单样式 */
 .form-control {
-    border-radius: 6px;
-    border: 1px solid #ced4da;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    background: white;
 }
 
 .form-control:focus {
-    border-color: #86b7fe;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.form-control::placeholder {
+    color: #adb5bd;
+    font-size: 0.9rem;
+}
+
+.form-select {
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+    padding: 0.75rem 1rem;
+    background: white;
+}
+
+.form-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    outline: none;
 }
 
 .form-label {
-    font-weight: 500;
-    color: #495057;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
 }
 
 /* 搜索框样式 */

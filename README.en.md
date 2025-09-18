@@ -1,6 +1,10 @@
 
 
-This project is a Django-based Human Resource Management System (HRMS) that includes multiple functional modules such as department management, employee information management, recruitment management, salary management, position management, training management, and rewards management. The project implements API-based CRUD (Create, Read, Update, Delete) operations using Django REST framework, making it suitable for building a frontend-backend decoupled HRMS.
+# Human Resources Payroll Management System (HRPMS)
+
+A modern human resources payroll management system based on Django, focusing on employee information management, salary calculation, attendance management and other core functions.
+
+This project is a Django-based HR Payroll Management System that focuses on core functions of human resources management and payroll management for enterprises. The system includes functional modules such as department management, employee information management, position management, salary management, and attendance management. The project implements API-based CRUD (Create, Read, Update, Delete) operations using Django REST framework, making it suitable for building a frontend-backend decoupled HR payroll management system.
 
 ## Functional Modules
 
@@ -20,7 +24,7 @@ This project is a Django-based Human Resource Management System (HRMS) that incl
 - Display list of recruitment entries
 - View recruitment details
 
-### Salary Management (salary)
+### Salary Management (salary_management)
 - Add, delete, search, and modify salary information
 - Display salary list
 - View salary details
@@ -44,6 +48,7 @@ This project is a Django-based Human Resource Management System (HRMS) that incl
 ### User Authentication (hr)
 - User login
 - User logout
+- Role-based access control
 
 ### Return Value Wrappers
 - `ResultVo`: Used to encapsulate operation results (success/failure) and data.
